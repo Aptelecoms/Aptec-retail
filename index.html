@@ -118,14 +118,7 @@ html[dir="ltr"] th,html[dir="ltr"] td{text-align:left}html[dir="ltr"] body{direc
 <section id="visit" class="panel"><div class="card"><h2>زيارة فرع وتقييم التشغيل</h2><div class="row"><div class="field"><label>اسم مدير المنطقة</label><input id="visitor" placeholder="اسم المسؤول"></div><div class="field"><label>الفرع</label><select id="branchSelect"><option value="">اختار الفرع</option></select></div></div><div class="row"><div class="field"><label>اسم المسؤول الموجود بالفرع</label><input id="shiftIn" placeholder="اسم مدير / مسؤول الفرع"></div><div class="field"><label>ملاحظات عامة</label><input id="visitNote" placeholder="ملاحظات الزيارة"></div></div><button class="secondary" onclick="captureVisitLocation()">تحديد موقعي للزيارة</button><span id="visitLoc" class="muted">لم يتم تحديد الموقع بعد</span><div id="checkSummary" class="check-summary"></div><div id="checklist"></div><div class="row savebar" style="justify-content:space-between;margin-top:18px"><div><b id="scoreText">0 / 0</b><div class="muted">نسبة استكمال الشيك ليست</div></div><button class="primary" onclick="saveVisit()">حفظ الزيارة</button></div><div class="progress" style="margin-top:10px"><span id="scoreBar"></span></div><div id="visitMsg" class="status">قيّم كل بند: سيئة أو جيدة أو NA. عند اختيار سيئة، اكتب الملاحظة المطلوبة.</div></div></section>
 <section id="sales" class="panel"><div id="sdUpload" class="card" style="display:none;margin-bottom:14px"><h3>رفع ملف المبيعات الشهري</h3><p class="muted">اختار ملف الـ Sales Dashboard (xlsb أو xlsx). الملف بيتقرأ على جهازك وبيترفع الملخص بس (الفروع والمندوبين والـ GA اليومي).</p><div class="row"><input type="file" id="sdFile" accept=".xlsb,.xlsx,.xlsm"><button class="primary" onclick="sdUpload()">رفع وتحديث الداشبورد</button></div><div id="sdMsg" class="status" style="display:none"></div></div>
 <div id="sdRoot"></div>
-<details style="margin-top:16px"><summary class="muted" style="cursor:pointer;padding:8px 0">التارجت والمبيعات اليدوية (ورقتي Targets / Sales)</summary><div class="card"><h2>Sales Dashboard</h2><p class="muted">التارجت والمبيعات الشهرية للفروع (المبالغ بنفس العملة المكتوبة في الشيت).</p>
-<div class="row"><div class="field"><label>الشهر</label><input type="month" id="salesMonth"></div><button class="secondary" onclick="loadSales()">تحديث</button></div>
-<div id="salesMsg" class="status" style="display:none"></div>
-<div class="grid" id="salesKpi" style="margin-top:8px"></div>
-<div style="margin-top:16px"><div class="row" style="justify-content:space-between"><b>نسبة تحقيق التارجت</b><b id="salesPct" style="color:var(--o)">—</b></div><div class="progress" style="margin-top:8px"><div id="salesBar" style="height:100%;width:0;background:var(--o);transition:width .6s"></div></div></div></div>
-<div class="card" style="margin-top:14px"><h3>المبيعات اليومية</h3><div id="salesDaily" style="display:flex;align-items:flex-end;gap:3px;height:120px;margin-top:10px"></div><div class="muted" style="margin-top:6px">كل عمود = يوم في الشهر.</div></div>
-<div class="card" id="salesMgrCard" style="margin-top:14px;display:none"><h3>حسب مدير المنطقة</h3><div class="tablewrap"><table><thead><tr><th>المدير</th><th>الفروع</th><th>التارجت</th><th>المبيعات</th><th>التحقيق</th></tr></thead><tbody id="salesMgrRows"></tbody></table></div></div>
-<div class="card" style="margin-top:14px"><h3>تفاصيل الفروع</h3><div class="tablewrap"><table><thead><tr><th>الفرع</th><th>المدير</th><th>التارجت</th><th>المبيعات</th><th>التحقيق</th></tr></thead><tbody id="salesRows"></tbody></table></div></div></details></section>
+</section>
 <section id="manager" class="panel">
 <div class="card"><h2>لوحة متابعة الإدارة</h2><p class="muted">تقارير شهرية لأداء مديري المناطق ومؤشرات أداء الشركة.</p><div class="grid"><div><div class="muted">إجمالي حركات الحضور والانصراف</div><div class="metric" id="mAtt">0</div></div><div><div class="muted">إجمالي الزيارات</div><div class="metric" id="mVisit">0</div></div><div><div class="muted">متوسط جودة الزيارات</div><div class="metric" id="mScore">0%</div></div></div><div class="row" style="margin-top:16px"><button class="primary" onclick="exportData()">تحميل التقرير التفصيلي (Excel/CSV)</button><button class="secondary" onclick="loadReport()">تحديث البيانات</button></div></div>
 <div class="card" style="margin-top:14px"><h3>تقرير مدير منطقة</h3><div class="row"><div class="field"><label>اختيار مدير المنطقة</label><select id="areaManagerSelect"><option value="">اختر مدير المنطقة</option></select></div><div class="field"><label>الشهر</label><input type="month" id="reportMonth"></div></div><div class="grid"><div><div class="muted">مرات الحضور</div><div class="metric" id="amIn">0</div></div><div><div class="muted">مرات الانصراف</div><div class="metric" id="amOut">0</div></div><div><div class="muted">عدد زيارات الشهر</div><div class="metric" id="amVisits">0</div></div></div><div class="row" style="margin-top:14px"><button class="primary" onclick="exportAreaManagerReport()">تحميل تقرير المدير المختار</button><button class="secondary" onclick="renderAreaManagerReport()">عرض التقرير</button></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>التاريخ</th><th>الحركة</th><th>المنطقة</th><th>الموقع</th></tr></thead><tbody id="amAttendanceRows"></tbody></table></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>تاريخ الزيارة</th><th>الفرع</th><th>التقييم</th><th>جيدة</th><th>سيئة</th></tr></thead><tbody id="amVisitRows"></tbody></table></div></div>
@@ -349,25 +342,7 @@ document.querySelector('header').insertAdjacentHTML('beforeend','<div id="userBo
 /* ===== Sales Dashboard ===== */
 function fmt(n){return Number(n||0).toLocaleString('en-US')}
 function pctTag(p){if(p===null||p===undefined)return '<span class="muted">—</span>';const c=p>=100?'var(--green)':p>=70?'var(--o)':'var(--red)';return '<b style="color:'+c+'">'+p+'%</b>'}
-async function loadSales(){
- if(!TOKEN)return;const mi=$('salesMonth');
- if(!mi.value){const d=new Date();mi.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
- const msg=$('salesMsg');msg.style.display='none';
- try{renderSales(await retailApi('getSales',{month:mi.value}))}
- catch(e){msg.textContent='تعذر تحميل المبيعات: '+e.message;msg.style.display=''}}
-function renderSales(r){
- const t=r.totals,msg=$('salesMsg');
- if(!t.target&&!t.sales){msg.textContent='لسه مفيش تارجت أو مبيعات للشهر ده. أضفها في ورقتي Targets وSales في الشيت.';msg.style.display=''}else msg.style.display='none';
- const k=[['التارجت',fmt(t.target)],['المبيعات',fmt(t.sales)],['المتبقي للتحقيق',fmt(t.remaining)],['المتوقع نهاية الشهر',fmt(t.projected)],['المطلوب يوميًا للتحقيق',fmt(t.requiredDaily)],['المتوسط اليومي',fmt(t.avgDaily)]];
- $('salesKpi').innerHTML=k.map(x=>'<div><div class="muted">'+x[0]+'</div><div class="metric">'+x[1]+'</div></div>').join('');
- $('salesPct').textContent=t.pct===null?'—':t.pct+'%';$('salesBar').style.width=Math.min(100,t.pct||0)+'%';
- const mx=Math.max(1,...r.daily);
- $('salesDaily').innerHTML=r.daily.map((v,i)=>'<div title="يوم '+(i+1)+': '+fmt(v)+'" style="flex:1;min-width:3px;border-radius:3px 3px 0 0;background:'+(v?'var(--o)':'var(--line)')+';height:'+Math.max(3,Math.round(v/mx*100))+'%"></div>').join('');
- $('salesMgrCard').style.display=r.isAdmin&&r.managers.length?'':'none';
- $('salesMgrRows').innerHTML=r.managers.map(m=>'<tr><td>'+esc(m.manager)+'</td><td>'+m.branches+'</td><td>'+fmt(m.target)+'</td><td>'+fmt(m.sales)+'</td><td>'+pctTag(m.pct)+'</td></tr>').join('');
- $('salesRows').innerHTML=r.branches.map(b=>'<tr><td>'+esc(b.branchName)+'</td><td>'+esc(b.manager)+'</td><td>'+fmt(b.target)+'</td><td>'+fmt(b.sales)+'</td><td>'+pctTag(b.pct)+'</td></tr>').join('')||'<tr><td colspan="5">لا توجد فروع</td></tr>'}
-document.querySelector('[data-tab="sales"]').addEventListener('click',loadSales);
-$('salesMonth').addEventListener('change',loadSales);
+
 
 if(TOKEN&&ME){startApp()}else{$('loginGate').style.display='grid'}
 
@@ -456,10 +431,10 @@ window.addEventListener('load',()=>{applyLang();document.querySelectorAll('.them
 
 /* ===== Sales performance dashboard (from monthly xlsb) ===== */
 let SD=null,SDS={am:'ALL',bm:'ALL',tab:'overview',level:'am',metric:'ga',region:'ALL',sortKey:'pct',dir:-1,shop:'ALL'};
-const SD_M={ga:'GA',pp:'Postpaid',ct:'Control'},sdN=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('en-US'),sdC=p=>p==null?'#8a91a1':p>=85?'#16a36a':p>=60?'#e08a00':'#df4545';
+const SD_M={ga:'الخطوط الجديدة (GA)',pp:'خطوط الفاتورة (Postpaid)',ct:'خطوط الكنترول (Control)'},sdN=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('en-US'),sdC=p=>p==null?'#8a91a1':p>=85?'#16a36a':p>=60?'#e08a00':'#df4545';
 const sdBadge=p=>'<span class="sd-badge" style="background:'+sdC(p)+'">'+(p==null?'—':Math.round(p)+'%')+'</span>',sdBar=p=>'<div class="sd-track"><div class="sd-fill" style="width:'+Math.max(2,Math.min(100,p||0))+'%;background:'+sdC(p)+'"></div></div>';
 async function loadSalesDash(){if(!TOKEN)return;const up=$('sdUpload');
- try{SD=await retailApi('getSalesDash');if(up)up.style.display=SD.isAdmin?'':'none';sdRender()}
+ try{SD=await retailApi('getSalesDash');if(up)up.style.display=(SD.isAdmin&&ME&&ME.employeeId==='ceo')?'':'none';sdRender()}
  catch(e){$('sdRoot').innerHTML='<div class="status bad">تعذر تحميل داشبورد المبيعات: '+esc(e.message)+'</div>'}}
 function sdSet(o){Object.assign(SDS,o);sdRender()}
 function sdShops(){return SD.shops.filter(s=>SDS.region==='ALL'||s[2]===SDS.region).map(s=>({name:s[0],ch:s[1],region:s[2],am:s[12]||s[3],bm:s[13]||'',v:{ga:[s[4],s[5],s[6]],pp:[s[7],s[8],null],ct:[s[9],s[10],null]},daily:(SD.daily||{})[s[0]]||[]}))}
@@ -472,7 +447,7 @@ function sdRender(){const R=$('sdRoot');if(!SD)return;
  h+='<div class="sd-tabs">'+['overview','compare'].map(t=>'<button class="sd-tab'+(SDS.tab===t?' on':'')+'" onclick="sdSet({tab:\''+t+'\'})">'+(t==='overview'?'نظرة عامة':'مقارنة')+'</button>').join('')+'</div>';
  h+='<div class="sd-bar"><b>KPI</b>'+Object.keys(SD_M).map(k=>chip(SDS.metric===k,SD_M[k],"sdSet({metric:'"+k+"'})")).join('')+'<b style="margin-inline-start:12px">المنطقة</b>'+regions.map(r=>chip(SDS.region===r,r==='ALL'?'الكل':r,"sdSet({region:'"+r.replace(/'/g,"\\'")+"',shop:'ALL'})")).join('')+'</div></div>';
  if(SDS.tab==='overview'){
-  const kp=['ga','pp','ct'].map(k=>{const a=sdAgg(shops,k),p=a.T?a.A/a.T*100:null;return'<div class="sd-k"><div class="row" style="justify-content:space-between"><b>'+SD_M[k]+'</b>'+sdBadge(p)+'</div><div class="v">'+sdN(a.A)+'</div>'+sdBar(p)+'<div class="row" style="justify-content:space-between;margin-top:8px"><span class="muted">Target '+sdN(a.T)+'</span><span class="muted">'+(a.P!=null?'Proj. '+sdN(a.P)+' ('+Math.round(a.P/a.T*100)+'%)':'')+'</span></div></div>'}).join('');
+  const kp=['ga','pp','ct'].map(k=>{const a=sdAgg(shops,k),p=a.T?a.A/a.T*100:null;return'<div class="sd-k"><div class="row" style="justify-content:space-between"><b>'+SD_M[k]+'</b>'+sdBadge(p)+'</div><div class="v">'+sdN(a.A)+'</div>'+sdBar(p)+'<div class="row" style="justify-content:space-between;margin-top:8px"><span class="muted">Target '+sdN(a.T)+'</span><span class="muted">'+(a.P!=null?'التوقع '+sdN(a.P)+' ('+Math.round(a.P/a.T*100)+'%)':'')+'</span></div></div>'}).join('');
   const tot=sdAgg(shops,'ga'),mx=Math.max(1,...tot.daily),days=tot.daily.map((x,i)=>'<div title="'+(i+1)+': '+x+'"><i style="height:'+Math.max(2,Math.round(x/mx*115))+'px;background:'+(x===mx?'#ff7900':'#ffb874')+'"></i><small>'+(i+1)+'</small></div>').join('');
   const br=shops.map(s=>{const v=s.v[SDS.metric];return sdMk(s.name,s.am,v[0],v[1],v[2],s.daily)}).filter(r=>r.pct!=null).sort((a,b)=>b.pct-a.pct),ln=r=>'<div class="sd-line"><span>'+esc(r.name)+'</span>'+sdBadge(r.pct)+'</div>';
   const amNames=[...new Set(shops.map(s=>s.am).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar')),bmNames=[...new Set(shops.filter(s=>(SDS.am==='ALL'||s.am===SDS.am)).map(s=>s.bm).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
@@ -487,7 +462,7 @@ function sdRender(){const R=$('sdRoot');if(!SD)return;
   const bmSel='<select class="sd-sel" onchange="sdSet({bm:this.value})"><option value="ALL">كل مديري الفروع</option>'+bmNames.map(n=>'<option'+(SDS.bm===n?' selected':'')+' value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'</select>';
   const bmShops=amShops.filter(s=>SDS.bm==='ALL'||s.bm===SDS.bm);
   const bmCard='<div class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between"><b>مدير الفرع وفرعه</b>'+bmSel+'</div><div class="muted" style="margin-top:4px">'+(SDS.am==='ALL'?'كل المناطق':'ضمن منطقة '+esc(SDS.am))+'</div><div style="margin-top:10px">'+tb(SDS.bm==='ALL'?sortRows(grp(amShops,s=>s.bm,'فرع')):sortRows(bmShops.map(mkRow)))+'</div></div>';
-  h+='<div class="sd-kpis">'+kp+'</div><div class="card"><b>GA اليومي (كل الفروع المحددة)</b><div class="sd-days">'+days+'</div></div><div class="sd-two" style="margin-top:14px"><div class="card"><b style="color:#13774e">أفضل 5 فروع · '+SD_M[SDS.metric]+'</b>'+br.slice(0,5).map(ln).join('')+'</div><div class="card"><b style="color:#b42332">محتاجة متابعة · '+SD_M[SDS.metric]+'</b>'+br.slice(-5).reverse().map(ln).join('')+'</div></div>'+amCard+bmCard;
+  h+='<div class="sd-kpis">'+kp+'</div><div class="card"><b>الخطوط الجديدة (GA) اليومي — كل الفروع المحددة</b><div class="sd-days">'+days+'</div></div><div class="sd-two" style="margin-top:14px"><div class="card"><b style="color:#13774e">أفضل 5 فروع · '+SD_M[SDS.metric]+'</b>'+br.slice(0,5).map(ln).join('')+'</div><div class="card"><b style="color:#b42332">محتاجة متابعة · '+SD_M[SDS.metric]+'</b>'+br.slice(-5).reverse().map(ln).join('')+'</div></div>'+amCard+bmCard;
  }else{
   const lv=[['partner','Partner'],['am','مديرو المناطق'],['branch','الفروع'],['agent','سيلز كل فرع']];
   const sorts=[['pct','النسبة'],['A','الفعلي'],['T','التارجت'],['P','التوقع'],['name','الاسم']];
@@ -499,7 +474,7 @@ function sdRender(){const R=$('sdRoot');if(!SD)return;
   const k=SDS.sortKey,d=SDS.dir;list.sort((a,b)=>k==='name'?d*String(a.name).localeCompare(String(b.name)):d*((a[k]==null?-1:a[k])-(b[k]==null?-1:b[k])));
   const ok=list.filter(r=>r.pct!=null),best=ok.slice().sort((a,b)=>b.pct-a.pct)[0],worst=ok.slice().sort((a,b)=>a.pct-b.pct)[0],avg=ok.length?ok.reduce((n,r)=>n+r.pct,0)/ok.length:null;
   h+='<div class="sd-bar" style="justify-content:space-between"><div class="sd-bar" style="margin:0">'+lv.map(l=>chip(SDS.level===l[0],l[1],"sdSet({level:'"+l[0]+"'})")).join('')+'</div><div class="sd-bar" style="margin:0"><b>ترتيب حسب</b>'+sorts.map(o=>chip(k===o[0],o[1],"sdSet({sortKey:'"+o[0]+"',dir:"+(o[0]==='name'?1:-1)+"})")).join('')+'<button class="sd-chip" onclick="sdSet({dir:'+(-d)+'})">'+(d<0?'الأعلى ↓':'الأقل ↑')+'</button></div></div>';
-  if(SDS.level==='agent')h+='<div class="status"><b>الفرع</b> <select class="sd-sel" onchange="sdSet({shop:this.value})"><option value="ALL">كل الفروع</option>'+shops.map(s=>'<option'+(SDS.shop===s.name?' selected':'')+' value="'+esc(s.name)+'">'+esc(s.name)+'</option>').join('')+'</select> <span class="muted">أرقام المندوبين GA فقط.</span></div>';
+  if(SDS.level==='agent')h+='<div class="status"><b>الفرع</b> <select class="sd-sel" onchange="sdSet({shop:this.value})"><option value="ALL">كل الفروع</option>'+shops.map(s=>'<option'+(SDS.shop===s.name?' selected':'')+' value="'+esc(s.name)+'">'+esc(s.name)+'</option>').join('')+'</select> <span class="muted">أرقام المندوبين للخطوط الجديدة (GA) فقط.</span></div>';
   if(SDS.level==='partner')h+='<div class="status">الملف فيه بارتنر واحد (Aptec) فبيتقسم حسب نوع الفرع. لما يتضاف بارتنرز تانيين هيظهروا هنا.</div>';
   if(ok.length)h+='<div class="sd-spread"><div><small>الأفضل</small><b style="color:#16a36a">'+Math.round(best.pct)+'%</b><span>'+esc(best.name)+'</span></div><div><small>الأضعف</small><b style="color:#df4545">'+Math.round(worst.pct)+'%</b><span>'+esc(worst.name)+'</span></div><div><small>المتوسط</small><b>'+Math.round(avg)+'%</b><span>'+ok.length+' في المقارنة</span></div><div><small>الفجوة</small><b style="color:#ff7900">'+Math.round(best.pct-worst.pct)+' نقطة</b><span>أفضل ↔ أضعف</span></div></div>';
   const th=(key,label)=>'<th class="sd-th" onclick="sdSet({sortKey:\''+key+'\',dir:'+(k===key?-d:(key==='name'?1:-1))+'})">'+label+(k===key?(d<0?' ↓':' ↑'):'')+'</th>';
@@ -519,7 +494,7 @@ async function sdUpload(){const msg=$('sdMsg'),show=(t,c)=>{msg.className='statu
   const agents=table('Agents').filter(d=>d['Agent Name']&&typeof d['GA A']==='number').map(d=>[d['Agent Name'],d['Shop Name'],nr(d['GA T']),nr(d['GA A'])]);
   const dg=table('Daily GA').filter(d=>d['Shop Name']),dayKeys=dg.length?Object.keys(dg[0]).filter(k=>/^\d+$/.test(k)):[];const daily={};let asOf=0;
   dg.forEach(d=>{daily[d['Shop Name']]=dayKeys.map(k=>Number(d[k])||0);dayKeys.forEach((k,i)=>{if(Number(d[k])&&i+1>asOf)asOf=i+1})});
-  const mi=$('salesMonth')&&$('salesMonth').value||monthData();
+  const mi=monthData();
   show('جاري الرفع ('+shops.length+' فرع، '+agents.length+' مندوب)...','');
   const r=await retailApi('saveSalesData',{payload:{month:mi,asOf,shops,agents,daily}});
   show('تم الرفع: '+r.shops+' فرع و'+r.agents+' مندوب','good');await loadSalesDash()}
