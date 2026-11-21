@@ -292,18 +292,18 @@ async function exportTeamExcel(btn){
  const bd={style:'thin',color:{argb:'FFE3E3E3'}},box={top:bd,bottom:bd,left:bd,right:bd};
  const used={};const nm=s=>{let b=String(s).replace(/[\\\/\?\*\[\]:]/g,' ').trim().slice(0,28)||'ورقة',n=b,i=2;while(used[n])n=b.slice(0,26)+' '+i++;used[n]=1;return n};
  const sheet=(name,title,sub,cols,widths,meta)=>{const ws=wb.addWorksheet(nm(name),{views:[{rightToLeft:true,showGridLines:false}]});
-  widths.forEach((w,i)=>ws.getColumn(i+1).width=w);const n=cols;
+  widths.forEach((w,i)=>ws.getColumn(i+1).width=w);const n=cols;ws.pageSetup={horizontalCentered:true,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0};
   [22,26,22,6,4].forEach((h,i)=>{ws.getRow(i+1).height=h;for(let c=1;c<=n;c++)ws.getCell(i+1,c).fill=fl(i==4?OR:BK)});
   ws.addImage(logo,{tl:{col:0,row:0},ext:{width:118,height:91}});
-  const t=ws.getCell(2,3);t.value=title;t.font={name:FN,size:18,bold:true,color:{argb:'FFFFFFFF'}};t.alignment=rtl;ws.mergeCells(2,3,2,Math.max(3,n));
-  const s=ws.getCell(3,3);s.value=sub;s.font={name:FN,size:11,color:{argb:'FFFFB066'}};s.alignment=rtl;ws.mergeCells(3,3,3,Math.max(3,n));
+  const t=ws.getCell(2,3);t.value=title;t.font={name:FN,size:18,bold:true,color:{argb:'FFFFFFFF'}};t.alignment=ctr;ws.mergeCells(2,3,2,Math.max(3,n));
+  const s=ws.getCell(3,3);s.value=sub;s.font={name:FN,size:11,color:{argb:'FFFFB066'}};s.alignment=ctr;ws.mergeCells(3,3,3,Math.max(3,n));
   ws.getRow(6).height=22;let c=n;(meta||[]).forEach(([k,v])=>{const a=ws.getCell(6,c);a.value=k;a.font={name:FN,size:10,bold:true,color:{argb:'FF8A8A8A'}};a.alignment=rtl;const b=ws.getCell(6,c-1);b.value=v;b.font={name:FN,size:11,bold:true,color:{argb:DG}};b.alignment=rtl;c-=2});
   return ws};
  const table=(ws,r,heads,rows,pctCols)=>{ws.getRow(r).height=26;heads.forEach((h,i)=>{const c=ws.getCell(r,i+1);c.value=h;c.font={name:FN,size:11,bold:true,color:{argb:'FFFFFFFF'}};c.fill=fl(DG);c.alignment=ctr;c.border={...box,bottom:{style:'thick',color:{argb:OR}}}});
-  rows.forEach((row,k)=>{const rr=r+1+k;ws.getRow(rr).height=21;row.forEach((v,i)=>{const c=ws.getCell(rr,i+1);c.value=v;c.font={name:FN,size:10,color:{argb:'FF222222'}};c.alignment=i===0?rtl:ctr;c.border=box;if(k%2)c.fill=fl('FFFAFAFA');
+  rows.forEach((row,k)=>{const rr=r+1+k;ws.getRow(rr).height=21;row.forEach((v,i)=>{const c=ws.getCell(rr,i+1);c.value=v;c.font={name:FN,size:10,color:{argb:'FF222222'}};c.alignment=ctr;c.border=box;if(k%2)c.fill=fl('FFFAFAFA');
    if((pctCols||[]).includes(i)&&typeof v==='number'){c.numFmt='0"%"';c.font={name:FN,size:10,bold:true,color:{argb:v>=85?'FF1E9E5A':v>=70?'FFF5A623':'FFD64545'}}}})});
   ws.autoFilter={from:{row:r,column:1},to:{row:r,column:heads.length}};return r+rows.length+2};
- const foot=(ws,r,n)=>{for(let c=1;c<=n;c++)ws.getCell(r,c).fill=fl(BK);ws.getRow(r).height=22;const f=ws.getCell(r,1);f.value='Copyright © Aptelecoms training team | Aptelcoms Retail · Orange';f.font={name:FN,size:9,color:{argb:'FFFFFFFF'}};f.alignment=rtl;ws.mergeCells(r,1,r,n)};
+ const foot=(ws,r,n)=>{for(let c=1;c<=n;c++)ws.getCell(r,c).fill=fl(BK);ws.getRow(r).height=22;const f=ws.getCell(r,1);f.value='Copyright © Aptelecoms training team | Aptelcoms Retail · Orange';f.font={name:FN,size:9,color:{argb:'FFFFFFFF'}};f.alignment=ctr;ws.mergeCells(r,1,r,n)};
  const kp=(ws,r,items,n)=>{const span=Math.max(1,Math.floor(n/items.length));ws.getRow(r).height=18;ws.getRow(r+1).height=36;items.forEach(([l,v,col],i)=>{const c=1+i*span;for(let rr=r;rr<=r+1;rr++)for(let cc=c;cc<c+span;cc++)ws.getCell(rr,cc).fill=fl(GR);
    if(span>1){ws.mergeCells(r,c,r,c+span-1);ws.mergeCells(r+1,c,r+1,c+span-1)}const a=ws.getCell(r,c);a.value=l;a.font={name:FN,size:10,bold:true,color:{argb:'FF8A8A8A'}};a.alignment={horizontal:'center',vertical:'bottom'};a.border={top:{style:'medium',color:{argb:col}}};const b=ws.getCell(r+1,c);b.value=v;b.font={name:FN,size:22,bold:true,color:{argb:col}};b.alignment=ctr});return r+3};
  const sum=a=>a.reduce((x,y)=>x+y,0),avg=a=>a.length?Math.round(sum(a)/a.length):0,hrs=m=>m?(m/60).toFixed(1):'';
@@ -316,7 +316,7 @@ async function exportTeamExcel(btn){
  const W=co?[22,26,28,12,16,16,14,12]:[28,30,12,16,16,14,12];const N=H.length;
  const ws=sheet('الملخص',title,sub,N,W,meta);const st=all.map(x=>({...x,s:stat(x.m)}));
  let r=kp(ws,8,[['عدد مديري الفروع',all.length,'FF2B2B2B'],['أيام الحضور',sum(st.map(x=>x.s.days)),'FF2A6EBB'],['البنود السيئة',sum(st.map(x=>x.s.bad)),'FFD64545'],['متوسط التقييم %',avg(st.filter(x=>x.s.minis).map(x=>x.s.pct)),'FFFF7900']],N);
- ws.getCell(r,N).value='أداء مديري الفروع';ws.getCell(r,N).font={name:FN,size:12,bold:true};ws.getCell(r,N).alignment=rtl;r++;
+ ws.getCell(r,N).value='أداء مديري الفروع';ws.getCell(r,N).font={name:FN,size:12,bold:true};ws.getCell(r,N).alignment=ctr;r++;
  const rows=st.map(x=>{const a=[x.m.name,x.m.branches.join(' / '),x.s.days,x.s.avgH,x.s.minis,x.s.minis?x.s.pct:'-',x.s.bad];if(co)a.unshift(x.g);return a});
  r=table(ws,r,H,rows,[co?6:5]);if(co){const t=sheet('مديرو المناطق',title,'ملخص مديري المناطق',6,[28,12,16,16,16,16],meta);
   table(t,8,['مدير المنطقة','عدد الفروع','أيام الحضور','زيارات الفروع','متوسط تقييم الزيارات %','مديرو الفروع'],R.groups.map(g=>[g.areaManager,g.branchCount,g.visitDays,g.visitCount,g.visitCount?g.visitAvg:'-',g.managers.length]),[4])}
@@ -328,11 +328,11 @@ async function exportTeamExcel(btn){
  const MH=['مدير الفرع','الفرع','التاريخ','التقييم %','جيدة','سيئة','NA','البنود السيئة'];if(co)MH.unshift('مدير المنطقة');const wm=sheet('الشيك ليست اليومية',title,'نتائج الشيك ليست اليومية',MH.length,co?[22,26,24,14,10,8,8,8,50]:[26,24,14,10,8,8,8,50],meta);
  const mr=[];all.forEach(x=>x.m.minis.forEach(v=>{const q=[x.m.name,v.branch,v.date,v.percent,v.good,v.bad,v.na,v.issues.join(' ، ')];if(co)q.unshift(x.g);mr.push(q)}));foot(wm,table(wm,8,MH,mr,[co?4:3])+1,MH.length);
  // شيت لكل مدير فرع
- all.forEach(x=>{const m=x.m,s=stat(m);const w=sheet(m.name,'ملف مدير الفرع: '+m.name,m.branches.join(' / ')+(co?' — '+x.g:''),7,[16,24,12,12,12,10,50],meta);
+ all.forEach(x=>{const m=x.m,s=stat(m);const w=sheet(m.name,'ملف مدير الفرع: '+m.name,m.branches.join(' / ')+(co?' — '+x.g:''),7,[16,24,14,14,14,14,50],meta);
   let r=kp(w,8,[['أيام الحضور',s.days,'FF2A6EBB'],['الشيك ليست',s.minis,'FF2B2B2B'],['متوسط التقييم %',s.minis?s.pct:0,'FFFF7900'],['البنود السيئة',s.bad,'FFD64545']],7);
-  w.getCell(r,7).value='الحضور والانصراف';w.getCell(r,7).font={name:FN,size:12,bold:true};w.getCell(r,7).alignment=rtl;r++;
+  w.getCell(r,7).value='الحضور والانصراف';w.getCell(r,7).font={name:FN,size:12,bold:true};w.getCell(r,7).alignment=ctr;r++;
   r=table(w,r,['التاريخ','الفرع','حضور','انصراف','ساعات'],m.attendance.map(a=>[a.date,a.branch,a.in,a.out||'—',hrs(a.mins)]));
-  w.getCell(r,7).value='الشيك ليست اليومية';w.getCell(r,7).font={name:FN,size:12,bold:true};w.getCell(r,7).alignment=rtl;r++;
+  w.getCell(r,7).value='الشيك ليست اليومية';w.getCell(r,7).font={name:FN,size:12,bold:true};w.getCell(r,7).alignment=ctr;r++;
   r=table(w,r,['التاريخ','الفرع','التقييم %','جيدة','سيئة','NA','البنود السيئة'],m.minis.map(v=>[v.date,v.branch,v.percent,v.good,v.bad,v.na,v.issues.join(' ، ')]),[2]);foot(w,r,7)});
  const buf=await wb.xlsx.writeBuffer(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='Aptelecom-'+(co?'Company':'AreaManager')+'-Report-'+month+'.xlsx';document.body.appendChild(a);a.click();a.remove();
  }catch(e){alert('تعذر تجهيز Excel: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent=old}}}
