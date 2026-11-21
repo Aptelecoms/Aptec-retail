@@ -63,7 +63,7 @@ function updateScore(){let r=getRatings(),done=r.filter(x=>x.rating),good=r.filt
 function gps(cb,err){if(!navigator.geolocation){err('المتصفح لا يدعم تحديد الموقع');return}navigator.geolocation.getCurrentPosition(p=>cb({lat:p.coords.latitude,lng:p.coords.longitude,accuracy:Math.round(p.coords.accuracy)}),e=>err(e.code===1?'لازم تسمح بالوصول للموقع من إعدادات المتصفح':e.code===2?'تعذر تحديد الموقع حالياً':'انتهت مهلة تحديد الموقع'),{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
 function distanceMeters(a,b){const rad=x=>x*Math.PI/180,R=6371000,dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng),x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 function branchCoordinates(branch){const lat=Number(branch?.lat),lng=Number(branch?.lng);return Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180?{lat,lng}:null}
-function showAttendanceBranch(){const b=DATA.branches[Number($('attBranch').value)],el=$('attBranchInfo');if(!b){el.textContent='اختار الفرع لعرض بياناته.';el.className='status';return}el.textContent=`${b.name} — ${b.address||b.city||''}. ${branchCoordinates(b)?'إحداثيات الفرع جاهزة.':'إحداثيات الفرع لم تُضف بعد؛ التسجيل الجغرافي سيظل موقوفًا لحين إضافتها.'}`;el.className='status '+(branchCoordinates(b)?'good':'')}
+function showAttendanceBranch(){const b=DATA.branches[Number($('attBranch').value)],el=$('attBranchInfo');if(!b){el.textContent='اختار الفرع لعرض بياناته.';el.className='status';return}el.textContent=`${b.name} — ${b.address||b.city||''}. ${(branchCoordinates(b)||b.hasCoordinates)?'إحداثيات الفرع جاهزة.':'إحداثيات الفرع لم تُضف بعد؛ التسجيل الجغرافي سيظل موقوفًا لحين إضافتها.'}`;el.className='status '+((branchCoordinates(b)||b.hasCoordinates)?'good':'')}
 function validateGeofence(pos,branch){const target=branchCoordinates(branch);if(!target)return {ok:false,message:'إحداثيات هذا الفرع لم تُضاف بعد. مش هنسجل حضور أو انصراف قبل تحديد موقع الفرع.'};if(!Number.isFinite(pos.accuracy)||pos.accuracy>30)return {ok:false,message:`دقة GPS الحالية ${pos.accuracy||'غير معروفة'} متر. لازم الدقة تكون 30 متر أو أفضل؛ حاول تقف في مكان مفتوح وتعيد المحاولة.`};const distance=Math.round(distanceMeters(pos,target));if(distance>100)return {ok:false,message:`أنت خارج نطاق الفرع. المسافة الحالية حوالي ${distance} متر، والمسموح 100 متر فقط.`};return {ok:true,distance}}
 const RETAIL_API_URL='https://script.google.com/macros/s/AKfycbyjUtaz-rZyCbi8qOrGKE9RM0hIusHFzNithkB1yFP43lJjxqPwaJ_lkDS1NBHNLZo1/exec';
 async function retailApi(action,payload={}){
@@ -186,8 +186,12 @@ async function startApp(){
  $('attName').value=ME.employeeName;$('attName').readOnly=true;$('visitor').value=ME.employeeName;$('visitor').readOnly=true;
  const roleSel=$('attRole');[...roleSel.options].forEach(o=>{if(ME.role&&o.value.toLowerCase()===ME.role.toLowerCase())roleSel.value=o.value});roleSel.disabled=true;
  document.querySelector('[data-tab="manager"]').style.display=IS_ADMIN()?'':'none';
- try{const bs=await retailApi('getBranches'),ok=new Set(bs.map(b=>String(b.branchId)));
-  ['branchSelect','attBranch'].forEach(id=>[...$(id).options].forEach(o=>{if(o.value!==''&&!ok.has(DATA.branches[+o.value].name))o.remove()}));
+ try{const bs=await retailApi('getBranches');
+  /* القايمة بتتبني من السيرفر: كل مستخدم يشوف فروعه بس */
+  DATA.branches=bs.map(b=>({name:String(b.branchId),kind:'',region:b.region||'',governorate:b.region||'',city:'',address:b.region||'',sector:b.region||'',hasCoordinates:b.hasCoordinates}));
+  ['branchSelect','attBranch'].forEach(id=>{const sel=$(id);[...sel.options].forEach(o=>{if(o.value!=='')o.remove()});
+   DATA.branches.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.name+(b.region?' — '+b.region:'');sel.appendChild(o)})});
+  $('branchCount').textContent=DATA.branches.length;
   if(!bs.length)setMsg('attMsg','مفيش فروع مربوطة بحسابك. كلّم الإدارة.','bad')}catch(e){setMsg('attMsg',e.message,'bad')}
  loadReport()}
 async function loadReport(){
