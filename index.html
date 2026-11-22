@@ -98,6 +98,7 @@ footer .copyright{margin-top:6px;font-size:12px;opacity:.75}
 .sd-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.sd-bar>b{font-size:12px;color:var(--muted)}
 .sd-chip{padding:8px 13px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;font-size:12px;cursor:pointer}.sd-chip.on{background:linear-gradient(110deg,#ff8a18,#ff6a1f);border-color:#ff7900;color:#fff}
 .sd-tabs{display:flex;gap:6px;margin:6px 0 4px}.sd-tab{padding:11px 20px;border-radius:12px;border:0;font-weight:900;font-size:14px;cursor:pointer;background:transparent;color:var(--muted)}.sd-tab.on{background:linear-gradient(110deg,#ff8a18,#ff6a1f);color:#fff}
+.ac-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:2px 0 6px}.ac-badge{background:#fff1e6;color:#c2410c;border:1px solid #fdba74;border-radius:20px;padding:2px 10px;font-weight:800;font-size:12px}.ac-two{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin:12px 0}@media(max-width:820px){.ac-two{grid-template-columns:1fr}}.ac-tr{height:8px;background:#f3e6da;border-radius:6px;overflow:hidden}.ac-tr i{display:block;height:100%;background:linear-gradient(90deg,#ff8a18,#ff6a1f);border-radius:6px}.ac-days{display:flex;align-items:flex-end;gap:3px;height:140px;overflow-x:auto;padding:0 4px}.ac-days b{font-size:8px}.ac-days>div{flex:1;min-width:20px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:9px}.ac-days i{display:block;width:100%;background:#ff9a3c;border-radius:3px 3px 0 0;margin:2px 0}.ac-ul{margin:0;padding:0 18px;line-height:1.6}.ac-ul li{margin-bottom:6px}.ac-rows tr.me td{background:#fff3e6}.ac-rows tr.cl{cursor:pointer}.ac-rows tr.cl:hover td{background:#fff8f0}
 .sd-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin:12px 0}.sd-k{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}.sd-k .v{font-size:26px;font-weight:900;color:#ff7900;line-height:1.1;margin:8px 0}
 .sd-track{height:10px;border-radius:10px;background:var(--line);overflow:hidden;min-width:90px}.sd-fill{height:100%;border-radius:10px}
 .sd-badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:800;color:#fff}
@@ -289,12 +290,12 @@ async function retailApi(action,payload={}){
  const j=await r.json();
  if(!j.success){if(j.code==='AUTH'){logout()}throw new Error(j.message||'فشلت العملية')}
  return j.data}
-function logout(){try{Object.keys(localStorage).filter(k=>k.indexOf('sdc_')===0).forEach(k=>localStorage.removeItem(k))}catch(_){}SD=null;SDINIT=0;TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
+function logout(){try{Object.keys(localStorage).filter(k=>k.indexOf('sdc_')===0||k.indexOf('acc_')===0).forEach(k=>localStorage.removeItem(k))}catch(_){}SD=null;SDINIT=0;ACT=null;ACTTRIED=false;ACTERR='';TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
 async function doLogin(){
  const id=$('lgId').value.trim(),pin=$('lgPin').value.trim();
  if(!id||!pin){$('lgMsg').textContent='اكتب الكود والـ PIN';return}
  $('lgBtn').disabled=true;$('lgMsg').textContent='جارٍ التحقق...';
- try{const r=await retailApi('login',{employeeId:id,pin});TOKEN=r.token;ME=r.employee;sessionStorage.setItem('rt',TOKEN);sessionStorage.setItem('rm',JSON.stringify(ME));await startApp();setTimeout(()=>{try{loadSalesDash()}catch(_){}},400)}
+ try{const r=await retailApi('login',{employeeId:id,pin});TOKEN=r.token;ME=r.employee;sessionStorage.setItem('rt',TOKEN);sessionStorage.setItem('rm',JSON.stringify(ME));await startApp();setTimeout(()=>{try{loadSalesDash();loadActDash()}catch(_){}},400)}
  catch(e){$('lgMsg').textContent=e.message}
  finally{$('lgBtn').disabled=false}}
 const IS_BM=()=>!!ME&&/branch manager/i.test(ME.role||'');
@@ -450,7 +451,7 @@ function applyLang(){const en=LANG==='en';document.documentElement.lang=en?'en':
  if(en){trTree(document.body)}else restoreAr();
  document.querySelectorAll('.langBtn').forEach(b=>b.textContent=en?'عربي':'EN');
  try{localStorage.setItem('lang',LANG)}catch(_){}
- try{if(typeof SD!=='undefined'&&SD&&!SD.empty&&SDS.tab==='plan'&&$('sdRoot').innerHTML)sdRender()}catch(_){}}
+ try{if(typeof SD!=='undefined'&&SD&&!SD.empty&&(SDS.tab==='plan'||SDS.tab==='act')&&$('sdRoot').innerHTML)sdRender()}catch(_){}}
 function toggleLang(){LANG=LANG==='en'?'ar':'en';applyLang()}
 function toggleTheme(){const d=document.documentElement.dataset.theme==='dark';document.documentElement.dataset.theme=d?'light':'dark';document.querySelectorAll('.themeBtn').forEach(b=>b.textContent=d?'🌙':'☀');try{localStorage.setItem('theme',d?'light':'dark')}catch(_){}}
 try{if(localStorage.getItem('theme')==='dark')document.documentElement.dataset.theme='dark'}catch(_){}
@@ -477,11 +478,13 @@ function sdShops(all){return SD.shops.filter(s=>all||SDS.region==='ALL'||s[2]===
 function sdAgg(list,k){let T=0,A=0,P=0,h=false;const d=[];list.forEach(s=>{const v=s.v[k];T+=v[0]||0;A+=v[1]||0;if(v[2]!=null){P+=v[2];h=true}s.daily.forEach((x,i)=>d[i]=(d[i]||0)+x)});return{T,A,P:h?P:null,daily:d}}
 function sdMk(name,sub,T,A,P,daily){return{name,sub,T,A,P,daily,pct:T>0?A/T*100:null}}
 function sdRender(){const R=$('sdRoot');if(!SD)return;
+ {const u_=$('sdUpload');if(u_&&SD.isAdmin&&ME&&ME.employeeId==='ceo')u_.style.display=SDS.tab==='act'?'none':''}
  if(SD.empty){R.innerHTML='<div class="card"><h3>داشبورد أداء المبيعات</h3><p class="muted">'+(SD.isAdmin?'لسه ماترفعش ملف مبيعات. ارفع ملف الشهر من الكارت اللي فوق.':'لسه مفيش بيانات مبيعات. كلّم الإدارة.')+'</p></div>';return}
  const shops=sdShops(),regions=['ALL'].concat([...new Set(SD.shops.map(s=>s[2]))]),chip=(on,label,fn)=>'<button class="sd-chip'+(on?' on':'')+'" onclick="'+fn+'">'+esc(label)+'</button>';
  let h='<div class="card"><div class="row" style="justify-content:space-between"><div><h2 style="margin:0">Sales Dashboard</h2><div class="muted">'+(SD.month||'')+' · حتى يوم '+(SD.asOf||'—')+(SD.uploadedAt?' · آخر رفع: '+new Date(SD.uploadedAt).toLocaleString('en-GB'):'')+'</div></div></div>';
- h+='<div class="sd-tabs">'+['overview','compare','plan'].map(t=>'<button class="sd-tab'+(SDS.tab===t?' on':'')+'" onclick="sdSet({tab:\''+t+'\'})">'+(t==='overview'?'نظرة عامة':t==='compare'?'مقارنة':'خطة العمل')+'</button>').join('')+'</div>';
+ h+='<div class="sd-tabs">'+['overview','compare','plan','act'].map(t=>'<button class="sd-tab'+(SDS.tab===t?' on':'')+'" onclick="sdSet({tab:\''+t+'\'})">'+(t==='overview'?'نظرة عامة':t==='compare'?'مقارنة':t==='plan'?'خطة العمل':'Activation')+'</button>').join('')+'</div>';
  if(SDS.tab==='plan'){R.innerHTML=h+'</div>'+plHTML();if(LANG==='en')trTree(R);return}
+ if(SDS.tab==='act'){if(!ACTTRIED)loadActDash();R.innerHTML=h+'</div>'+acHTML();if(LANG==='en')trTree(R);return}
  const grps=SD_GROUPS.filter(g=>SD.kpis.some(k=>k[2]===g[0])),gks=SD.kpis.filter(k=>k[2]===SDS.group);
  h+='<div class="sd-bar"><b>القسم</b>'+grps.map(g=>chip(SDS.group===g[0],g[1],"sdSet({group:'"+g[0]+"',metric:'"+(SD.kpis.find(k=>k[2]===g[0])||[])[0]+"'})")).join('')+'</div>';
  h+='<div class="sd-bar"><b>المؤشر</b>'+gks.map(k=>chip(SDS.metric===k[0],k[1],"sdSet({metric:'"+k[0]+"'})")).join('')+'<b style="margin-inline-start:12px">المنطقة</b><select class="sd-sel" onchange="sdSet({region:this.value,shop:\'ALL\'})">'+regions.map(r=>'<option value="'+esc(r)+'"'+(SDS.region===r?' selected':'')+'>'+(r==='ALL'?'الكل':esc(r))+'</option>').join('')+'</select></div></div>';
@@ -562,6 +565,108 @@ async function sdUpload(){const msg=$('sdMsg'),show=(t,c)=>{msg.className='statu
   show('تم الرفع: '+r.shops+' فرع و'+r.agents+' مندوب','good');await loadSalesDash()}
  catch(e){show('تعذر الرفع: '+e.message,'bad')}}
 document.querySelector('[data-tab="sales"]').addEventListener('click',loadSalesDash);
+/* ===== Activation tab (ملف التشغيل) ===== */
+let ACT=null,ACTL=false,ACTTRIED=false,ACTERR='',ACS={lvl:'co',am:'',br:''},ACR=[];
+const AC_P={Control:['كنترول','Control'],ALO:['ALO','ALO'],PREMIER:['بريميير','Premier'],Eagle:['إيجل','Eagle'],ElKing:['الكينج','El King'],'PRE MBB Home 4G':['هوم 4G (بري)','Home 4G (Pre)'],'POST MBB Home 4G':['هوم 4G (بوست)','Home 4G (Post)'],'PRE MBB internet':['إنترنت (بري)','Internet (Pre)'],CORPORATE:['كوربوريت','Corporate'],Supermax:['سوبرماكس','Super Max'],MPI:['MPI','MPI']};
+const AC_R=[[/Balance/i,['الرصيد أقل من 20 جنيه وقت التفعيل','Balance below 20 EGP at activation'],['اتأكد إن رصيد الخط 20 جنيه على الأقل قبل التفعيل','Make sure the line has at least 20 EGP before activating']],[/recharged/i,['خط كنترول ما اتشحنش بالمبلغ المطلوب','Control line not recharged with the required amount'],['اشحن الخط بقيمة الباقة المطلوبة وقت التفعيل','Recharge the line with the required bundle amount at activation']],[/MPI|SPI/i,['باقات MPI/SPI مش بتتحسب','MPI/SPI tariffs are not counted'],['وجّه السيلز لباقات محسوبة بدل MPI/SPI','Steer sales to counted tariffs instead of MPI/SPI']],[/suspend|Deactive/i,['خط موقوف أو غير نشط','Line suspended / deactivated'],['اتأكد إن الخط نشط قبل التسليم للعميل','Verify the line is active before handing it over']],[/RnR/i,['خط كنترول RnR','Control line is RnR'],['راجع شرط RnR قبل البيع','Check the RnR rule before selling']],[/No Data bundle/i,['مفيش باقة داتا مع الخط','No data bundle on the line'],['فعّل باقة الداتا مع خطوط الإنترنت','Activate the data bundle with internet lines']]];
+function acReason(k){const r=AC_R.find(x=>x[0].test(k));return r?{n:r[1],a:r[2]}:{n:[k,k],a:['راجع السبب مع الفريق','Review the reason with the team']}}
+function acKey(n){return String(n||'').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g,'').replace(/abou/g,'abo')}
+function acFind(name){if(!ACT||ACT.empty)return null;if(!ACT._ix){ACT._ix={};ACT.shops.forEach(s=>ACT._ix[acKey(s[0])]=s)}return ACT._ix[acKey(name)]||null}
+function acDay(v){let t;if(v instanceof Date)t=v.getTime();else if(typeof v==='number')t=Math.round((v-25569)*864e5);else t=Date.parse(v);if(!isFinite(t))return null;const d=new Date(t);return{y:d.getUTCFullYear(),m:d.getUTCMonth()+1,d:d.getUTCDate()}}
+function acBuild(ga,mp,mn){
+ let mx=null;ga.forEach(r=>{const d=acDay(r.Act_date);if(d){const k=d.y*10000+d.m*100+d.d;if(mx==null||k>mx)mx=k}});
+ if(mx==null)throw new Error('مش لاقي تواريخ تفعيل في شيت GA');
+ const Y=Math.floor(mx/10000),M=Math.floor(mx/100)%100,asOf=mx%100,dim=new Date(Y,M,0).getDate(),r1=v=>Math.round(v*10)/10;
+ const sh={},ag={},co={lines:0,pts:0,nc:0,prod:{},daily:Array(dim).fill(0),reasons:{},summer:0,rnr:0,mnp:[0,0,0,0]};
+ const S=n=>{n=String(n||'').trim();return sh[n]||(sh[n]={n,am:'',reg:'',lines:0,pts:0,nc:0,prod:{},rs:{},daily:Array(dim).fill(0),mnp:[0,0,0,0]})};
+ const add=(o,p,pt)=>{const x=o[p]||(o[p]=[0,0]);x[0]++;x[1]+=pt};
+ ga.forEach(r=>{const d=acDay(r.Act_date);if(!d||d.y!==Y||d.m!==M||!r.Product||!r['Wincash Name'])return;
+  const p=String(r.Product).trim(),s=S(r['Wincash Name']),ok=String(r.Count).trim()==='Counted',pt=ok?(+r.Points||0):0;
+  s.am=s.am||String(r['Area Manager']||'').trim();s.reg=s.reg||String(r['STR Region']||'').trim();
+  const aid=String(r.ID||'')+'|'+s.n,a=ag[aid]||(ag[aid]={n:String(r.Name||'').trim(),s:s.n,lines:0,pts:0,nc:0,prod:{}});
+  if(ok){s.lines++;s.pts+=pt;add(s.prod,p,pt);s.daily[d.d-1]+=pt;a.lines++;a.pts+=pt;add(a.prod,p,pt);co.lines++;co.pts+=pt;add(co.prod,p,pt);co.daily[d.d-1]+=pt;if(String(r['Summer Flag']).trim()==='Touristic')co.summer++;if(String(r['RnR Flag']).trim()==='Yes')co.rnr++}
+  else{const why=String(r['Reason of Not Counted']||'غير محدد').trim();s.nc++;a.nc++;co.nc++;s.rs[why]=(s.rs[why]||0)+1;co.reasons[why]=(co.reasons[why]||0)+1}});
+ const mnp=(rows,off)=>rows.forEach(r=>{const n=String(r['Wincash Name']||'').trim();if(!n)return;const c=/closed/i.test(String(r.Status))?0:1;S(n).mnp[off+c]++;co.mnp[off+c]++});
+ mnp(mp,0);mnp(mn,2);
+ const fix=o=>{Object.keys(o).forEach(k=>{o[k][1]=r1(o[k][1])});return o};
+ co.pts=r1(co.pts);co.daily=co.daily.map(r1);fix(co.prod);
+ const shops=Object.values(sh).sort((a,b)=>b.pts-a.pts).map(s=>[s.n,s.am,s.reg,s.lines,r1(s.pts),s.nc,fix(s.prod),s.rs,s.daily.map(r1),s.mnp]);
+ const agents=Object.values(ag).filter(a=>a.lines||a.nc).sort((a,b)=>b.pts-a.pts).map(a=>[a.n,a.s,a.lines,r1(a.pts),a.nc,fix(a.prod)]);
+ return{month:Y+'-'+('0'+M).slice(-2),asOf,dim,asOfDate:Y+'-'+('0'+M).slice(-2)+'-'+('0'+asOf).slice(-2),co,shops,agents}}
+async function acUpload(){const msg=$('acMsg'),show=(t,c)=>{msg.className='status '+(c||'');msg.textContent=t;msg.style.display=''};
+ const f=$('acFile').files[0];if(!f){show('اختار الملف الأول','bad');return}
+ try{show('جاري قراءة الملف...','');await sdLoadXlsx();
+  const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:'array',sheets:['GA','MNP Ported in SRs','MNP Not Ported in SRs'],cellFormula:false,cellStyles:false,cellHTML:false});
+  const tbl=n=>{const ws=wb.Sheets[n];if(!ws)throw new Error('الشيت '+n+' مش موجود في الملف');const g=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,blankrows:false}),h=(g[0]||[]).map(x=>x==null?'':String(x).trim());return g.slice(1).map(r=>{const o={};h.forEach((k,i)=>{if(k&&o[k]===undefined)o[k]=r[i]});return o})};
+  const pl=acBuild(tbl('GA'),tbl('MNP Ported in SRs'),tbl('MNP Not Ported in SRs'));
+  show('جاري الرفع ('+pl.shops.length+' فرع، '+pl.agents.length+' سيلز، حتى يوم '+pl.asOf+')...','');
+  const r=await retailApi('saveActData',{payload:pl});
+  show('تم الرفع: '+r.shops+' فرع و'+r.agents+' سيلز','good');await loadActDash(true)}
+ catch(e){show('تعذر الرفع: '+e.message,'bad')}}
+function acInit(){const me=ACT.me,ams=ACT.ams.map(a=>a[0]).filter(x=>x!=='—');
+ if(me){ACS.am=me.kind==='am'?me.name:me.am;ACS.lvl=me.kind==='am'?'am':'br'}
+ else if(!ams.includes(ACS.am))ACS.am=ams[0]||'';
+ const brs=acBrs();if(!brs.includes(ACS.br))ACS.br=(ACT.me&&ACT.me.mine&&ACT.me.mine[0])||brs[0]||''}
+function acBrs(){return ACT.shops.filter(s=>s[1]===ACS.am&&(!ACT.me||ACT.me.kind==='am'||ACT.me.mine.includes(s[0]))).map(s=>s[0])}
+function acApply(d){ACT=d;ACTERR='';if(!d.empty)acInit();acRefresh()}
+function acRefresh(){try{if(typeof SD!=='undefined'&&SD&&!SD.empty&&(SDS.tab==='act'||SDS.tab==='plan'))sdRender()}catch(_){}}
+async function loadActDash(force){if(!TOKEN)return;ACTTRIED=true;ACTL=true;const key='acc_'+(ME&&ME.employeeId);let cached=null;try{cached=localStorage.getItem(key)}catch(_){}
+ if(!ACT&&cached&&!force){try{acApply(JSON.parse(cached))}catch(_){cached=null}}
+ try{const d=await retailApi('getActDash'),txt=JSON.stringify(d);if(txt!==cached||!ACT||force){acApply(d);try{localStorage.setItem(key,txt)}catch(_){}}}
+ catch(e){if(!ACT){ACTERR=e.message;acRefresh()}}finally{ACTL=false}}
+function acSet(o){Object.assign(ACS,o);if(o.am!==undefined){const b=acBrs();if(!b.includes(ACS.br))ACS.br=b[0]||''}sdRender()}
+function acAgg(list){const o={lines:0,pts:0,nc:0,prod:{},daily:[],reasons:{},mnp:[0,0,0,0]};list.forEach(s=>{o.lines+=s[3];o.pts+=s[4];o.nc+=s[5];for(const p in s[6]){const x=o.prod[p]=o.prod[p]||[0,0];x[0]+=s[6][p][0];x[1]+=s[6][p][1]}for(const r in s[7])o.reasons[r]=(o.reasons[r]||0)+s[7][r];(s[8]||[]).forEach((v,i)=>o.daily[i]=(o.daily[i]||0)+v);(s[9]||[]).forEach((v,i)=>o.mnp[i]+=v)});return o}
+function acDateTxt(){const m=String(ACT.asOfDate).split('-');return m[2]+'/'+m[1]+'/'+m[0]}
+function acPick(t,i){const n=ACR[i];if(t==='am')acSet({lvl:'am',am:n});else if(t==='br'){const s=ACT.shops.find(x=>x[0]===n);acSet({lvl:'br',am:s?s[1]:ACS.am,br:n})}}
+function acHTML(){const EN=isEnLang(),L=(a,e)=>EN?e:a,E=plEsc,N=sdN;
+ const up=(!SD||!SD.isAdmin||!ME||ME.employeeId!=='ceo')?'':'<div class="card" style="margin-bottom:12px"><h3>'+L('رفع ملف التفعيلات (التشغيل)','Upload the Activation file')+'</h3><p class="muted">'+L('اختار ملف الـ Activation (xlsb أو xlsx). بيتقرأ على جهازك وبيترفع الملخص بس، والرفع الجديد بيمسح القديم.','Choose the Activation file (xlsb/xlsx). It is read on your device and only the summary is uploaded; a new upload replaces the old one.')+'</p><div class="row"><input type="file" id="acFile" accept=".xlsb,.xlsx,.xlsm"><button class="primary" onclick="acUpload()">'+L('رفع وتحديث','Upload & refresh')+'</button></div><div id="acMsg" class="status" style="display:none"></div></div>';
+ let h='<div data-notr="1" class="ac-root">'+up;
+ if(!ACT){h+=ACTERR?'<div class="status bad">'+L('تعذر تحميل التفعيلات: ','Could not load activations: ')+E(ACTERR)+' <button class="secondary" onclick="ACTTRIED=false;ACTERR=\'\';loadActDash(true)">'+L('إعادة المحاولة','Retry')+'</button></div>':'<div class="card" style="text-align:center;padding:30px"><div class="sd-spin"></div><div class="muted" style="margin-top:10px">'+L('جاري تحميل التفعيلات...','Loading activations...')+'</div></div>';return h+'</div>'}
+ if(ACT.empty)return h+'<div class="card"><h3>Activation</h3><p class="muted">'+L('لسه ماترفعش ملف تفعيلات.','No activation file uploaded yet.')+'</p></div></div>';
+ const me=ACT.me,ams=ACT.ams.map(a=>a[0]).filter(x=>x!=='—').sort((a,b)=>a.localeCompare(b,'ar')),brs=acBrs();
+ let lvl=ACS.lvl;if(me&&me.kind==='bm'&&lvl==='am'){}
+ let shops,agg,label;
+ if(lvl==='am'){shops=ACT.shops.filter(s=>s[1]===ACS.am);agg=acAgg(shops);label=ACS.am}
+ else if(lvl==='br'){shops=ACT.shops.filter(s=>s[0]===ACS.br);agg=acAgg(shops);label=ACS.br}
+ else{shops=ACT.shops;const c=ACT.co;agg={lines:c.lines,pts:c.pts,nc:c.nc,prod:c.prod,daily:c.daily,reasons:c.reasons,mnp:c.mnp};label=L('الشركة كلها','Whole company')}
+ const co=ACT.co,avgCo=co.lines?co.pts/co.lines:0,ppl=agg.lines?agg.pts/agg.lines:0,tot=agg.lines+agg.nc,ncp=tot?agg.nc/tot*100:0,mnT=agg.mnp[0]+agg.mnp[1]+agg.mnp[2]+agg.mnp[3],mnC=agg.mnp[0]+agg.mnp[2],diff=avgCo?(ppl/avgCo-1)*100:0;
+ const chip=(on,t,fn)=>'<button class="sd-chip'+(on?' on':'')+'" onclick="'+fn+'">'+E(t)+'</button>';
+ const sel=(id,list,cur,fn,dis)=>'<select class="sd-sel" '+(dis?'disabled':'')+' onchange="'+fn+'">'+list.map(n=>'<option value="'+E(n)+'"'+(cur===n?' selected':'')+'>'+E(n)+'</option>').join('')+'</select>';
+ h+='<div class="card"><div class="ac-bar"><span class="ac-badge">📅 '+L('بيانات حتى ','Data up to ')+acDateTxt()+'</span>'+(SD&&SD.asOf&&SD.asOf!==ACT.asOf?'<span class="muted" style="font-size:12px">'+L('شيت المبيعات حتى يوم ','Sales file up to day ')+SD.asOf+L(' — التفعيلات منفصلة وما بتأثرش على أرقام الخطة والمقارنة',' — Activation is separate and does not affect plan/compare numbers')+'</span>':'')+(ACT.uploadedAt?'<span class="muted" style="font-size:12px">'+L('آخر رفع: ','Last upload: ')+new Date(ACT.uploadedAt).toLocaleString('en-GB')+'</span>':'')+'</div>'
+  +'<div class="sd-bar"><b>'+L('المستوى','Level')+'</b>'+chip(lvl==='co',L('الشركة','Company'),"acSet({lvl:'co'})")+chip(lvl==='am',L('مدير منطقة','Area manager'),"acSet({lvl:'am'})")+chip(lvl==='br',L('فرع','Branch'),"acSet({lvl:'br'})")
+  +(lvl!=='co'?'<b style="margin-inline-start:10px">'+L('مدير المنطقة','Area manager')+'</b>'+sel('am',me?[ACS.am]:ams,ACS.am,'acSet({am:this.value})',!!me):'')+(lvl==='br'?'<b style="margin-inline-start:10px">'+L('الفرع','Branch')+'</b>'+sel('br',brs,ACS.br,'acSet({br:this.value})',me&&me.kind==='bm'&&brs.length<2):'')+'</div></div>';
+ const kc=(t,v,s,c)=>'<div class="sd-k" style="border-top:3px solid '+(c||'#ff7900')+'"><div class="muted">'+t+'</div><div class="v">'+v+'</div><div class="muted" style="font-size:12px">'+s+'</div></div>';
+ h+='<div class="sd-kpis" style="grid-template-columns:repeat(auto-fit,minmax(165px,1fr))">'+kc(L('خطوط اشتغلت','Counted lines'),N(agg.lines),L('من ','of ')+N(tot)+L(' تفعيل',' activations'))+kc(L('إجمالي النقاط','Total points'),N(agg.pts),L('متوسط يومي ','Daily avg ')+N(agg.pts/Math.max(1,ACT.asOf)))+kc(L('نقطة / خط','Points / line'),ppl.toFixed(1),lvl==='co'?L('متوسط الشركة','Company average'):(diff>=0?'▲ ':'▼ ')+Math.abs(Math.round(diff))+'% '+L('عن متوسط الشركة ','vs company avg ')+avgCo.toFixed(1),lvl==='co'?'#ff7900':diff>=0?'#16a36a':'#df4545')+kc(L('خطوط ما اتحسبتش','Not counted'),N(agg.nc),ncp.toFixed(1)+'% '+L('من التفعيلات','of activations'),ncp>3?'#df4545':'#16a36a')+kc(L('MNP مقفول','MNP closed'),N(mnC),L('من ','of ')+N(mnT)+L(' طلب',' requests'),'#ff7900')+'</div>';
+ const pk=Object.keys(agg.prod).sort((a,b)=>agg.prod[b][1]-agg.prod[a][1]),mxp=Math.max(1,...pk.map(k=>agg.prod[k][1])),sp=agg.pts||1;
+ const prod='<div class="tablewrap"><table class="ac-rows"><thead><tr><th>'+L('الفاكتور','Factor')+'</th><th>'+L('خطوط','Lines')+'</th><th>'+L('نقاط','Points')+'</th><th></th><th>'+L('% من النقاط','% of pts')+'</th><th>'+L('نقطة/خط','Pts/line')+'</th></tr></thead><tbody>'+(pk.map(k=>{const v=agg.prod[k];return'<tr><td><b>'+E((AC_P[k]||[k,k])[EN?1:0])+'</b></td><td>'+N(v[0])+'</td><td><b>'+N(v[1])+'</b></td><td style="min-width:110px"><div class="ac-tr"><i style="width:'+Math.max(2,v[1]/mxp*100)+'%"></i></div></td><td>'+(v[1]/sp*100).toFixed(1)+'%</td><td>'+(v[0]?(v[1]/v[0]).toFixed(1):'—')+'</td></tr>'}).join('')||'<tr><td colspan="6">—</td></tr>')+'</tbody></table></div>';
+ const dd=agg.daily.slice(0,ACT.asOf),mxd=Math.max(1,...dd),days='<div class="ac-days" dir="ltr">'+dd.map((x,i)=>'<div title="'+(i+1)+': '+N(x)+'"><b>'+N(x)+'</b><i style="height:'+Math.max(2,Math.round(x/mxd*90))+'px"></i><span>'+(i+1)+'</span></div>').join('')+'</div>';
+ const rk=Object.keys(agg.reasons).sort((a,b)=>agg.reasons[b]-agg.reasons[a]),reas=rk.length?'<ul class="ac-ul">'+rk.slice(0,5).map(k=>{const r=acReason(k);return'<li><b>'+E(r.n[EN?1:0])+'</b> <span class="ac-badge">'+agg.reasons[k]+'</span><div class="muted" style="font-size:12px">'+E(r.a[EN?1:0])+'</div></li>'}).join('')+'</ul>':'<div class="muted">'+L('مفيش خطوط غير محسوبة 👌','No uncounted lines 👌')+'</div>';
+ h+='<div class="ac-two"><div class="card"><h3>'+L('حسب الفاكتور — ','By factor — ')+E(label)+'</h3>'+prod+'</div><div class="card"><h3>'+L('النقاط اليومية','Daily points')+'</h3>'+days+'<h3 style="margin-top:8px">'+L('أسباب عدم الحساب','Why lines were not counted')+'</h3>'+reas+'</div></div>';
+ ACR=[];const rrow=(cells,cl,t,name,mine)=>{ACR.push(name);return'<tr class="'+(mine?'me ':'')+(cl?'cl':'')+'"'+(cl?' onclick="acPick(\''+t+'\','+(ACR.length-1)+')"':'')+'>'+cells+'</tr>'},cell=(n,l,p,nc)=>'<td><b>'+E(n)+'</b></td><td>'+N(l)+'</td><td><b>'+N(p)+'</b></td><td>'+(l?(p/l).toFixed(1):'—')+'</td><td>'+nc+'</td>';
+ const thd=(a)=>'<thead><tr><th>'+a+'</th><th>'+L('خطوط','Lines')+'</th><th>'+L('نقاط','Points')+'</th><th>'+L('نقطة/خط','Pts/line')+'</th><th>'+L('غير محسوب','Not counted')+'</th></tr></thead>';
+ let title,body;
+ if(lvl==='co'){title=L('ترتيب مديري المناطق (اضغط للتفاصيل)','Area managers ranking (tap for details)');body=thd(L('مدير المنطقة','Area manager'))+'<tbody>'+ACT.ams.slice().sort((a,b)=>b[2]-a[2]).map(a=>rrow(cell(a[0]+(a[5]?' · '+a[5]+L(' فرع',' br'):''),a[1],a[2],a[3]),a[0]!=='—'&&(!me||a[0]===ACS.am),'am',a[0],me&&a[0]===(me.kind==='am'?me.name:me.am))).join('')+'</tbody>'}
+ else if(lvl==='am'){title=L('فروع ','Branches of ')+ACS.am;body=thd(L('الفرع','Branch'))+'<tbody>'+shops.slice().sort((a,b)=>b[4]-a[4]).map(s=>rrow(cell(s[0],s[3],s[4],s[5]),true,'br',s[0],me&&me.mine.includes(s[0]))).join('')+'</tbody>'}
+ else{title=L('السيلز في ','Sales agents in ')+ACS.br;const ags=ACT.agents.filter(a=>a[1]===ACS.br).sort((a,b)=>b[3]-a[3]);body=thd(L('السيلز','Agent'))+'<tbody>'+(ags.map(a=>rrow(cell(a[0],a[2],a[3],a[4]),false,'',a[0],false)).join('')||'<tr><td colspan="5">—</td></tr>')+'</tbody>'}
+ h+='<div class="card"><h3>'+title+'</h3><div class="tablewrap"><table class="ac-rows">'+body+'</table></div></div>';
+ return h+'</div>'}
+/* قسم ملاحظات التشغيل داخل خطة العمل */
+function plAct(list,isBranch,L,bd){if(!ACT||ACT.empty)return'';
+ const ss=list.map(s=>acFind(s.name)).filter(Boolean);if(!ss.length)return'';
+ const a=acAgg(ss),co=ACT.co,avgCo=co.lines?co.pts/co.lines:0,ppl=a.lines?a.pts/a.lines:0,tot=a.lines+a.nc,ncp=tot?a.nc/tot*100:0,ncCo=(co.lines+co.nc)?co.nc/(co.lines+co.nc)*100:0,EN=isEnLang(),N=sdN,E=plEsc;
+ const dt=(m=>m[2]+'/'+m[1]+'/'+m[0])(String(ACT.asOfDate).split('-')),sameD=SD&&SD.asOf===ACT.asOf;
+ const kc=(t,v,s,c)=>'<div class="pl-k"><div class="pl-kh"><b>'+t+'</b></div><div class="pl-v" style="color:'+(c||'#ff7900')+'">'+v+'</div><div class="pl-m"><span>'+s+'</span></div></div>';
+ const cards='<div class="pl-ks" style="grid-template-columns:repeat(4,1fr)">'+kc(L('خطوط اشتغلت','Counted lines'),N(a.lines),L('من ','of ')+N(tot))+kc(L('النقاط','Points'),N(a.pts),L('نقطة/خط ','pts/line ')+ppl.toFixed(1))+kc(L('مقارنة بالشركة','vs company'),(ppl>=avgCo?'▲ ':'▼ ')+Math.abs(Math.round(avgCo?(ppl/avgCo-1)*100:0))+'%',L('متوسط الشركة ','company avg ')+avgCo.toFixed(1),ppl>=avgCo?'#16a36a':'#df4545')+kc(L('غير محسوب','Not counted'),N(a.nc),ncp.toFixed(1)+'% '+L('(الشركة ','(company ')+ncCo.toFixed(1)+'%)',ncp>ncCo?'#df4545':'#16a36a')+'</div>';
+ const rk=Object.keys(a.reasons).sort((x,y)=>a.reasons[y]-a.reasons[x]).slice(0,3);
+ const rrows=rk.map(k=>{const r=acReason(k);return'<tr><td><b>'+E(r.n[EN?1:0])+'</b></td><td style="text-align:center">'+a.reasons[k]+'</td><td class="pl-ed" contenteditable="true">'+E(r.a[EN?1:0])+'</td></tr>'}).join('');
+ let weak=[];
+ if(isBranch){const nm=ss[0][0];weak=ACT.agents.filter(x=>x[1]===nm&&x[2]>=15).map(x=>({n:x[0],v:x[3]/x[2],l:x[2],nc:x[4]})).sort((x,y)=>x.v-y.v).slice(0,3)}
+ else{weak=ss.filter(s=>s[3]>=30).map(s=>({n:s[0],v:s[4]/s[3],l:s[3],nc:s[5]})).sort((x,y)=>x.v-y.v).slice(0,3)}
+ const wk=weak.map(x=>'<div class="pl-ln"><span>'+bd(x.n)+' <span style="color:#8a91a1">('+N(x.l)+L(' خط',' lines')+(x.nc?' · '+x.nc+L(' غير محسوب',' not counted'):'')+')</span></span><span class="pl-bd" style="background:'+(x.v<avgCo?'#df4545':'#16a36a')+'">'+x.v.toFixed(1)+'</span></div>').join('');
+ return'<h2>'+L('ملاحظات التشغيل (التفعيلات)','Activation notes')+' <span style="background:#fff1e6;color:#c2410c;border:1px solid #fdba74;border-radius:20px;padding:1px 10px;font-size:12px;font-weight:800">📅 '+L('بيانات حتى ','data up to ')+dt+'</span>'+(sameD?'':' <span style="font-size:11px;color:#8a91a1;font-weight:400">'+L('(شيت المبيعات حتى يوم ','(sales file up to day ')+(SD.asOf||'—')+')</span>')+'</h2>'+cards
+ +'<div class="pl-two" style="margin-top:8px"><div class="pl-box"><b>'+L('أكتر أسباب الخطوط غير المحسوبة','Top reasons for uncounted lines')+'</b>'+(rrows?'<table><thead><tr><th>'+L('السبب','Reason')+'</th><th>'+L('العدد','Count')+'</th><th>'+L('الإجراء','Action')+'</th></tr></thead><tbody>'+rrows+'</tbody></table>':'<div class="muted">'+L('مفيش خطوط غير محسوبة','No uncounted lines')+'</div>')+'</div>'
+ +'<div class="pl-box"><b>'+(isBranch?L('أقل سيلز في نقطة/خط','Lowest agents by points/line'):L('أقل فروع في نقطة/خط','Lowest branches by points/line'))+'</b>'+(wk||'<div class="muted">—</div>')+'<div class="muted" style="font-size:11px;margin-top:6px">'+L('نقطة/خط = جودة التفعيل (الأعلى أفضل). متوسط الشركة ','Points/line = activation quality (higher is better). Company avg ')+avgCo.toFixed(1)+'</div></div></div>'}
+
 const RQ_T={annual:'إجازة اعتيادية',sick:'سيك ليف',permission:'إذن',long:'لونج أنول'},RQ_S={pending:['في انتظار الموافقة','#e08a00'],approved:['تمت الموافقة','#16a36a'],rejected:['مرفوض','#df4545'],cancelled:['ملغي','#8a91a1']};
 let RQ=null,RQF={st:'ALL',t:'new'};
 function rqCard(r,mode){const st=RQ_S[r.status]||['',''],when=r.type==='permission'?r.fromDate+' · من '+r.fromTime+' إلى '+r.toTime:(r.fromDate===r.toDate?r.fromDate:r.fromDate+' ← '+r.toDate)+' ('+r.days+' يوم)';
@@ -632,12 +737,12 @@ function plPage(list,title,sub,owner,isBranch){
  +'<h2>'+L('ملخص الأداء','Performance summary')+'</h2><div class="pl-ks">'+cards+'</div>'
  +'<h2>'+L('خطة الأكشن','Action plan')+'</h2><table><thead><tr><th>'+L('المؤشر والمشكلة','KPI & issue')+'</th><th>'+(isBranch?L('المندوبين الأضعف','Weakest agents'):L('الفروع الأضعف','Weakest branches'))+'</th><th>'+L('الخطوات المقترحة','Suggested steps')+'</th><th>'+L('المسؤول','Owner')+'</th><th>'+L('الموعد','Due')+'</th><th>'+L('تم','Done')+'</th></tr></thead><tbody>'+ar+'</tbody></table>'
  +'<h2>'+L('نقاط القوة وأسباب الضعف','Strengths & weaknesses')+'</h2><div class="pl-two"><div class="pl-box"><b>'+L('نقاط القوة','Strengths')+'</b>'+strong+'</div><div class="pl-box"><b>'+L('أسباب الضعف المحتملة','Possible causes of weakness')+'</b><ul class="pl-ul">'+(causes.map(c=>'<li>'+plEsc(c)+'</li>').join('')||'<li>'+L('مفيش أسباب واضحة من الأرقام','No clear causes from the numbers')+'</li>')+'</ul>'+(lowList?'<div style="margin-top:6px"><b>'+L('فروع تحت 60% (GA)','Branches below 60% (GA)')+'</b>'+lowList+'</div>':'')+'</div></div>'
- +'<h2>'+L('ملاحظات (اكتب قبل الطباعة)','Notes (write before printing)')+'</h2><div class="pl-note pl-ed" contenteditable="true"></div>'
+ +plAct(list,isBranch,L,bd)+'<h2>'+L('ملاحظات (اكتب قبل الطباعة)','Notes (write before printing)')+'</h2><div class="pl-note pl-ed" contenteditable="true"></div>'
  +'<div class="pl-sig"><div>'+(isBranch?L('مدير الفرع','Branch manager'):L('مدير المنطقة','Area manager'))+'</div><div>'+L('مدير المنطقة / المبيعات','Area / Sales manager')+'</div><div>'+L('مدير الشركة','Company manager')+'</div></div><div class="pl-foot">'+L('الخطة اتولدت تلقائيًا من ملف المبيعات · Aptelecom Retail','Generated automatically from the sales file · Aptelecom Retail')+'</div></div>'}
 function plSubjects(){const all=sdShops(true),me=SD.me,ams=[...new Set(all.map(s=>s.am).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));return{all,ams,me}}
 function plBuild(am,br){const {all}=plSubjects();const inAm=all.filter(s=>s.am===am);if(br&&br!=='ALL'){const s=all.filter(x=>x.name===br);const bm=s[0]&&s[0].bm||(isEnLang()?'Branch manager':'مدير الفرع');return plPage(s,br,(isEnLang()?'Branch · ':'فرع · ')+am,bm,true)}return plPage(inAm,am,isEnLang()?'Area manager · '+inAm.length+' branches':'مدير منطقة · '+inAm.length+' فروع',am,false)}
 function plRender(){sdRender()}
-function plHTML(){if(!SD||SD.empty){return'<div class="card"><h3>خطة العمل</h3><p class="muted">لسه مفيش بيانات مبيعات. الخطة بتتولد تلقائيًا بعد رفع ملف المبيعات.</p></div>'}
+function plHTML(){if(!ACTTRIED&&typeof loadActDash==='function')loadActDash();if(!SD||SD.empty){return'<div class="card"><h3>خطة العمل</h3><p class="muted">لسه مفيش بيانات مبيعات. الخطة بتتولد تلقائيًا بعد رفع ملف المبيعات.</p></div>'}
  const {all,ams,me}=plSubjects();let amList=ams;
  if(me){if(me.kind==='am'){amList=[me.name];PLS.am=me.name}else{amList=[me.am];PLS.am=me.am;PLS.br=me.mine[0]||'ALL'}}
  if(!PLS.am||!amList.includes(PLS.am))PLS.am=amList[0]||'';
