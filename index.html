@@ -133,6 +133,7 @@ html[dir="ltr"] th,html[dir="ltr"] td{text-align:left}html[dir="ltr"] body{direc
 .sd-days{height:150px}.sd-dsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:10px}.sd-dsum div{border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:11px;color:var(--muted)}.sd-dsum b{display:block;font-size:18px;color:#ff7900}
 .sd-rk{display:grid;grid-template-columns:minmax(110px,32%) 1fr 44px;gap:8px;align-items:center;font-size:12px;padding:3px 0}.sd-rk .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-rk .b{height:9px;background:#eceef3;border-radius:6px;overflow:hidden}.sd-rk .b i{display:block;height:100%}.sd-rk .p{text-align:end;font-weight:700}
 .pl-ol,.pl-ul{margin:0;padding-inline-start:18px;line-height:1.8}.pl-ol li,.pl-ul li{margin:0}
+.sd-spin{width:34px;height:34px;border:4px solid #ffd9b3;border-top-color:#ff7900;border-radius:50%;margin:0 auto;animation:sdsp .8s linear infinite}@keyframes sdsp{to{transform:rotate(360deg)}}
 #printRoot{display:none}
 @media print{:root{color-scheme:light!important}@page{size:A4;margin:10mm}html,body{background:#fff!important;min-width:0!important;width:auto!important;overflow:visible!important}#printRoot{width:100%!important;direction:rtl}#printRoot table{font-size:10.5px}body>*:not(#printRoot){display:none!important}#printRoot{display:block!important}#printRoot .pl-pg{font-size:92%;border:0;border-radius:0;max-width:none;margin:0;padding:0;page-break-after:always}#printRoot .pl-pg:last-child{page-break-after:auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}.pl-ed:hover{background:none}}
 @media(max-width:760px){.pl-ks{grid-template-columns:1fr 1fr}.pl-two{grid-template-columns:1fr}.pl-pg{padding:16px}.pl-pg table{font-size:11px}}
@@ -288,12 +289,12 @@ async function retailApi(action,payload={}){
  const j=await r.json();
  if(!j.success){if(j.code==='AUTH'){logout()}throw new Error(j.message||'فشلت العملية')}
  return j.data}
-function logout(){TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
+function logout(){try{Object.keys(localStorage).filter(k=>k.indexOf('sdc_')===0).forEach(k=>localStorage.removeItem(k))}catch(_){}SD=null;SDINIT=0;TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
 async function doLogin(){
  const id=$('lgId').value.trim(),pin=$('lgPin').value.trim();
  if(!id||!pin){$('lgMsg').textContent='اكتب الكود والـ PIN';return}
  $('lgBtn').disabled=true;$('lgMsg').textContent='جارٍ التحقق...';
- try{const r=await retailApi('login',{employeeId:id,pin});TOKEN=r.token;ME=r.employee;sessionStorage.setItem('rt',TOKEN);sessionStorage.setItem('rm',JSON.stringify(ME));await startApp()}
+ try{const r=await retailApi('login',{employeeId:id,pin});TOKEN=r.token;ME=r.employee;sessionStorage.setItem('rt',TOKEN);sessionStorage.setItem('rm',JSON.stringify(ME));await startApp();setTimeout(()=>{try{loadSalesDash()}catch(_){}},400)}
  catch(e){$('lgMsg').textContent=e.message}
  finally{$('lgBtn').disabled=false}}
 const IS_BM=()=>!!ME&&/branch manager/i.test(ME.role||'');
@@ -441,7 +442,7 @@ const I18N_KEYS=Object.keys(I18N_EN).filter(k=>k.length>=5||/^(كل عمود = |
 let LANG='ar';try{LANG=localStorage.getItem('lang')||'ar'}catch(_){}
 function trText(t){const k=t.trim();if(!k)return t;if(I18N_EN[k]!==undefined)return t.replace(k,I18N_EN[k]);if(!/[\u0600-\u06FF]/.test(t))return t;let o=t.replace(/(\d+)\s*بند/g,'$1 items').replace(/(\d+)\s*تقييم/g,'$1 ratings').replace(/\b1\s*فرع(?![\u0600-\u06FF])/g,'1 branch').replace(/(\d+)\s*فرع(?![\u0600-\u06FF])/g,'$1 branches').replace(/(\d+)\s*في المقارنة/g,'$1 compared').replace(/(\d+)\s*نقطة/g,'$1 pts').replace(/حتى يوم (\d+)/g,'up to day $1').replace(/مدير (?=[A-Za-z])/g,'Manager ');const AR=/[\u0600-\u06FF]/;for(const key of I18N_KEYS){let p=0,r='';for(;;){const i=o.indexOf(key,p);if(i<0){r+=o.slice(p);break}const b=i>0?o[i-1]:'',a=o[i+key.length]||'';if(AR.test(b)||AR.test(a)){r+=o.slice(p,i+key.length);p=i+key.length}else{r+=o.slice(p,i)+I18N_EN[key];p=i+key.length}}o=r}return o}
 function trNode(n){if(LANG!=='en'){return}if(n.__tr!==undefined&&n.nodeValue===n.__tr)return;const v=n.nodeValue;if(!/[\u0600-\u06FF]/.test(v))return;const o=trText(v);if(o!==v){n.__ar=v;n.__tr=o;n.nodeValue=o}}
-function trAttrs(el){if(LANG!=='en'||!el.getAttribute)return;['placeholder','title','alt'].forEach(a=>{const v=el.getAttribute(a);if(v&&/[\u0600-\u06FF]/.test(v)){if(!el.__arA)el.__arA={};if(el.__arA[a]===undefined)el.__arA[a]=v;el.setAttribute(a,trText(el.__arA[a]))}})}
+function trAttrs(el){if(LANG!=='en'||!el.getAttribute)return;['placeholder','title','alt'].forEach(a=>{const v=el.getAttribute(a);if(v&&/[\u0600-\u06FF]/.test(v)){if(!el.__arA)el.__arA={};if(el.__arA[a]===undefined)el.__arA[a]=v;{const nv=trText(el.__arA[a]);if(nv!==v)el.setAttribute(a,nv)}}})}
 function trTree(root){if(LANG!=='en')return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT,{acceptNode:n=>n.nodeType===1&&(/^(SCRIPT|STYLE)$/.test(n.tagName)||n.dataset&&n.dataset.notr)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});let n;while(n=w.nextNode()){n.nodeType===3?trNode(n):trAttrs(n)}}
 function restoreAr(){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);let n;while(n=w.nextNode()){if(n.nodeType===3){if(n.__ar!==undefined){n.nodeValue=n.__ar;n.__ar=undefined;n.__tr=undefined}}else if(n.__arA){for(const a in n.__arA)n.setAttribute(a,n.__arA[a]);n.__arA=undefined}}}
 let trBusy=false;const trObs=new MutationObserver(ms=>{if(LANG!=='en'||trBusy)return;trBusy=true;try{ms.forEach(m=>{if(m.type==='characterData'){if(!(m.target.parentElement&&m.target.parentElement.closest('[data-notr]')))trNode(m.target)}else if(m.type==='attributes'){if(!(m.target.closest&&m.target.closest('[data-notr]')))trAttrs(m.target)}else m.addedNodes.forEach(x=>{if(x.nodeType===3){if(!(x.parentElement&&x.parentElement.closest('[data-notr]')))trNode(x)}else if(x.nodeType===1&&!x.closest('[data-notr]')&&!(x.dataset&&x.dataset.notr))trTree(x)})})}finally{trBusy=false}});
@@ -461,9 +462,13 @@ window.addEventListener('load',()=>{applyLang();document.querySelectorAll('.them
 let SD=null,SDS={am:'ALL',bm:'ALL',tab:'overview',level:'am',metric:'ga',group:'sales',region:'ALL',sortKey:'pct',dir:-1,shop:'ALL'};
 const SD_M={ga:'الخطوط الجديدة (GA)',pp:'خطوط الفاتورة (Postpaid)',ct:'خطوط الكنترول (Control)'},sdN=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('en-US'),sdC=p=>p==null?'#8a91a1':p>=85?'#16a36a':p>=60?'#e08a00':'#df4545';
 const sdBadge=p=>'<span class="sd-badge" style="background:'+sdC(p)+'">'+(p==null?'—':Math.round(p)+'%')+'</span>',sdBar=p=>'<div class="sd-track"><div class="sd-fill" style="width:'+Math.max(2,Math.min(100,p||0))+'%;background:'+sdC(p)+'"></div></div>';
-async function loadSalesDash(){if(!TOKEN)return;const up=$('sdUpload');
- try{SD=await retailApi('getSalesDash');if(!SD.empty)sdKinit();if(up)up.style.display=(SD.isAdmin&&ME&&ME.employeeId==='ceo')?'':'none';if(SD.me&&!SD.__init){SD.__init=1;if(SD.me.kind==='am'){SDS.am=SD.me.name;SDS.level='am'}else{SDS.am=SD.me.am||'ALL';SDS.bm=SD.me.name;SDS.level='branch'}}sdRender()}
- catch(e){$('sdRoot').innerHTML='<div class="status bad">تعذر تحميل داشبورد المبيعات: '+esc(e.message)+'</div>'}}
+let SDINIT=0;
+function sdApply(d){const up=$('sdUpload');SD=d;if(!SD.empty)sdKinit();if(up)up.style.display=(SD.isAdmin&&ME&&ME.employeeId==='ceo')?'':'none';if(SD.me&&!SDINIT){SDINIT=1;if(SD.me.kind==='am'){SDS.am=SD.me.name;SDS.level='am'}else{SDS.am=SD.me.am||'ALL';SDS.bm=SD.me.name;SDS.level='branch'}}sdRender()}
+async function loadSalesDash(){if(!TOKEN)return;const key='sdc_'+(ME&&ME.employeeId);let cached=null;try{cached=localStorage.getItem(key)}catch(_){}
+ if(!SD&&cached){try{sdApply(JSON.parse(cached))}catch(_){cached=null}}
+ else if(!SD)$('sdRoot').innerHTML='<div class="card" style="text-align:center;padding:30px"><div class="sd-spin"></div><div class="muted" style="margin-top:10px">جاري تحميل بيانات المبيعات...</div></div>';
+ try{const d=await retailApi('getSalesDash'),txt=JSON.stringify(d);if(txt!==cached||!SD){sdApply(d);try{localStorage.setItem(key,txt)}catch(_){}}}
+ catch(e){if(!SD)$('sdRoot').innerHTML='<div class="status bad">تعذر تحميل داشبورد المبيعات: '+esc(e.message)+'</div>'}}
 function sdSet(o){Object.assign(SDS,o);sdRender()}
 const SD_DEFK=[['ga','الخطوط الجديدة (GA)','sales'],['pp','خطوط الفاتورة (Postpaid)','sales'],['ct','خطوط الكنترول (Control)','sales']];
 function sdV(s){const o={},x=s[14]||{},ks=SD.kpis&&SD.kpis.length?SD.kpis:SD_DEFK;ks.forEach(k=>{const v=x[k[0]];o[k[0]]=v?[v[0],v[1],v[2]==null?null:v[2]]:[null,null,null]});if(!s[14]){o.ga=[s[4],s[5],s[6]];o.pp=[s[7],s[8],null];o.ct=[s[9],s[10],null]}return o}
