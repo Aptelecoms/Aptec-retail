@@ -289,12 +289,12 @@ async function retailApi(action,payload={}){
  const j=await r.json();
  if(!j.success){if(j.code==='AUTH'){logout()}throw new Error(j.message||'فشلت العملية')}
  return j.data}
-function logout(){try{Object.keys(localStorage).filter(k=>k.indexOf('sdc_')===0||k.indexOf('acc_')===0).forEach(k=>localStorage.removeItem(k))}catch(_){}SD=null;{const h_=document.getElementById('homeTop10');if(h_)h_.innerHTML=''}SDINIT=0;ACT=null;ACTTRIED=false;ACTERR='';TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
+function logout(){try{Object.keys(localStorage).filter(k=>k.indexOf('sdc_')===0||k.indexOf('acc_')===0||k.indexOf('rp_')===0).forEach(k=>localStorage.removeItem(k))}catch(_){}window.__srvOk=false;SD=null;{const h_=document.getElementById('homeTop10');if(h_)h_.innerHTML=''}SDINIT=0;ACT=null;ACTTRIED=false;ACTERR='';TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
 async function doLogin(){
  const id=$('lgId').value.trim(),pin=$('lgPin').value.trim();
  if(!id||!pin){$('lgMsg').textContent='اكتب الكود والـ PIN';return}
  $('lgBtn').disabled=true;$('lgMsg').textContent='جارٍ التحقق...';
- try{const r=await retailApi('login',{employeeId:id,pin});TOKEN=r.token;ME=r.employee;sessionStorage.setItem('rt',TOKEN);sessionStorage.setItem('rm',JSON.stringify(ME));await startApp();setTimeout(()=>{try{loadSalesDash();loadActDash()}catch(_){}},400)}
+ try{const r=await retailApi('login',{employeeId:id,pin});TOKEN=r.token;ME=r.employee;sessionStorage.setItem('rt',TOKEN);sessionStorage.setItem('rm',JSON.stringify(ME));await startApp()}
  catch(e){$('lgMsg').textContent=e.message}
  finally{$('lgBtn').disabled=false}}
 const IS_BM=()=>!!ME&&/branch manager/i.test(ME.role||'');
@@ -312,7 +312,8 @@ async function loadMiniBoard(){
   $('visit').insertAdjacentHTML('afterbegin','<div class="card" id="miniBoard" style="margin-bottom:14px"><h3>الشيك ليست اليومية لفروعك — اليوم ('+r.done+' / '+r.total+')</h3><p class="muted">يملأها مدير كل فرع. عرض فقط.</p><div class="tablewrap"><table><thead><tr><th>الفرع</th><th>الحالة</th><th>النسبة</th><th>البنود السيئة</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>')}
  catch(e){}}
 async function startApp(){
- $('loginGate').style.display='none';$('lgMsg').textContent='';
+ $('loginGate').style.display='none';try{loadSalesDash();loadActDash()}catch(_){}
+ $('lgMsg').textContent='';
  $('userName').textContent=ME.employeeName+' • '+ME.role;
  {const m_=$('mgrTab');if(m_)m_.style.display=(ME.employeeId==='ceo'||ME.isAdmin===true)?'':'none'}
  $('attName').value=ME.employeeName;$('attName').readOnly=true;$('visitor').value=ME.employeeName;$('visitor').readOnly=true;
@@ -325,11 +326,13 @@ async function startApp(){
    DATA.branches.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.name+(b.region?' — '+b.region:'');sel.appendChild(o)})});
   $('branchCount').textContent=DATA.branches.length;
   if(!bs.length)setMsg('attMsg','مفيش فروع مربوطة بحسابك. كلّم الإدارة.','bad')}catch(e){setMsg('attMsg',e.message,'bad')}
- applyRoleChecklist();loadMiniBoard();initTeamCard();
+ applyRoleChecklist();loadMiniBoard();setTimeout(()=>{try{initTeamCard()}catch(_){}},2500);
  loadReport()}
 async function loadReport(){
  if(!TOKEN)return;
- try{SRV=await retailApi('getReport',{month:monthData()})}catch(e){$('dashboardDate').textContent='تعذر تحميل البيانات: '+e.message}
+ const ck='rp_'+(ME&&ME.employeeId)+'_'+monthData();let cj=null;try{cj=localStorage.getItem(ck)}catch(_){}
+ if(cj&&!window.__srvOk){try{SRV=JSON.parse(cj);refreshDashboard()}catch(_){cj=null}}
+ try{const d=await retailApi('getReport',{month:monthData()}),tx=JSON.stringify(d);SRV=d;window.__srvOk=true;try{localStorage.setItem(ck,tx)}catch(_){}}catch(e){if(!window.__srvOk)$('dashboardDate').textContent='تعذر تحميل البيانات: '+e.message}
  refreshDashboard()}
 function recordAttendance(){
  const idx=$('attBranch').value,type=$('attType').value;
@@ -369,7 +372,6 @@ document.querySelector('header').insertAdjacentHTML('beforeend','<div id="userBo
 ['lgId','lgPin'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()}));
 
 /* ===== Sales Dashboard ===== */
-function fmt(n){return Number(n||0).toLocaleString('en-US')}
 function pctTag(p){if(p===null||p===undefined)return '<span class="muted">—</span>';const c=p>=100?'var(--green)':p>=70?'var(--o)':'var(--red)';return '<b style="color:'+c+'">'+p+'%</b>'}
 
 
@@ -474,8 +476,14 @@ async function loadSalesDash(){if(!TOKEN)return;const key='sdc_'+(ME&&ME.employe
  catch(e){if(!SD)$('sdRoot').innerHTML='<div class="status bad">تعذر تحميل داشبورد المبيعات: '+esc(e.message)+'</div>'}}
 function homeTop10(){const el=document.getElementById('homeTop10');if(!el||!SD||!SD.shops)return;const L=(x,y)=>isEnLang()?y:x;
  const med=['#f5b301','#b8bcc4','#cd7f32'],nD=SD.asOf||0;
- let t=sdShops(true).map(x=>{const v=x.v.ga;return{n:x.name,am:x.am,T:v[0],A:v[1],P:v[2]!=null?v[2]:v[1]}}).filter(r=>r.P>0).sort((p,q)=>q.P-p.P).slice(0,10);const mx=t[0]?t[0].P:1;
- el.setAttribute('data-notr','1');el.innerHTML='<div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap"><div><b>🏆 '+L('أعلى 10 فروع — الخطوط الجديدة (GA) المتوقعة','Top 10 branches — projected new lines (GA)')+'</b><div class="muted" style="font-size:12px;margin-top:3px">'+L('مرتبة حسب التوقع (Projection) — الفعلي حتى يوم '+nD,'Ranked by projection — actual up to day '+nD)+'</div></div><a class="sd-chip" style="text-decoration:none" onclick="document.querySelector(\'[data-tab=sales]\').click()">'+L('كل التفاصيل ‹','All details ›')+'</a></div><div style="margin-top:10px">'+t.map((r,i)=>{const p=r.T>0?Math.round(r.P/r.T*100):null;return '<div style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-top:'+(i?'1px solid #eee':'0')+'"><div style="width:28px;height:28px;border-radius:50%;background:'+(i<3?med[i]:'#f1f2f5')+';color:'+(i<3?'#fff':'#555')+';display:grid;place-items:center;font-weight:800;font-size:13px;flex:none">'+(i+1)+'</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.n)+'</b><b style="color:#ff7900;font-size:16px">'+sdN(Math.round(r.P))+'</b></div><div class="muted" style="font-size:11px;margin:1px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.am||'')+' · '+L('الفعلي','Actual')+' '+sdN(r.A)+(r.T?' · '+L('التارجت','Target')+' '+sdN(r.T):'')+'</div><div style="height:6px;background:#eceef2;border-radius:6px;overflow:hidden"><i style="display:block;height:100%;width:'+Math.round(r.P/mx*100)+'%;background:'+(i<3?'#ff7900':'#ffb874')+'"></i></div></div>'+(p==null?'':'<div style="flex:none">'+sdBadge(p)+'</div>')+'</div>'}).join('')+'</div></div>'}
+ const all=sdShops(true).map(x=>{const v=x.v.ga;return{n:x.name,am:x.am,T:v[0],A:v[1],P:v[2]!=null?v[2]:v[1]}}).filter(r=>r.T>0||r.P>0);
+ const top=all.slice().sort((p,q)=>q.P-p.P).slice(0,10),low=all.slice().sort((p,q)=>p.P-q.P).slice(0,10),mx=Math.max(1,...all.map(r=>r.P));
+ const card=(list,title,sub,isLow)=>'<div class="card" style="margin:0;padding:14px"><b>'+title+'</b><div class="muted" style="font-size:11px;margin:2px 0 6px">'+sub+'</div>'+list.map((r,i)=>{const p=r.T>0?Math.round(r.P/r.T*100):null,bg=isLow?'#fdecec':(i<3?med[i]:'#f1f2f5'),fg=isLow?'#c0392b':(i<3?'#fff':'#555');
+  return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:'+(i?'1px solid #eee':'0')+'"><div style="width:24px;height:24px;border-radius:50%;background:'+bg+';color:'+fg+';display:grid;place-items:center;font-weight:800;font-size:12px;flex:none">'+(i+1)+'</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:6px"><b style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.n)+'</b><b style="color:'+(isLow?'#c0392b':'#ff7900')+';font-size:14px">'+sdN(Math.round(r.P))+'</b></div><div class="muted" style="font-size:10.5px;margin:1px 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.am||'')+' · '+L('الفعلي','Actual')+' '+sdN(r.A)+'</div><div style="height:5px;background:#eceef2;border-radius:5px;overflow:hidden"><i style="display:block;height:100%;width:'+Math.max(2,Math.round(r.P/mx*100))+'%;background:'+(isLow?'#e57373':(i<3?'#ff7900':'#ffb874'))+'"></i></div></div>'+(p==null?'':'<div style="flex:none">'+sdBadge(p)+'</div>')+'</div>'}).join('')+'</div>';
+ el.setAttribute('data-notr','1');
+ el.innerHTML='<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="muted" style="font-size:12px">'+L('الترتيب حسب التوقع (Projection) — الفعلي حتى يوم '+nD,'Ranked by projection — actual up to day '+nD)+'</span><a class="sd-chip" style="text-decoration:none" onclick="document.querySelector(\'[data-tab=sales]\').click()">'+L('كل التفاصيل ‹','All details ›')+'</a></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">'
+  +card(top,'🏆 '+L('أعلى 10 فروع — GA','Top 10 branches — GA'),L('الأعلى توقعًا','Highest projection'),false)
+  +card(low,'⚠️ '+L('أقل 10 فروع — GA','Bottom 10 branches — GA'),L('الأقل توقعًا — محتاجة متابعة','Lowest projection — need follow-up'),true)+'</div></div>'}
 function sdSet(o){Object.assign(SDS,o);sdRender()}
 const SD_DEFK=[['ga','الخطوط الجديدة (GA)','sales'],['pp','خطوط الفاتورة (Postpaid)','sales'],['ct','خطوط الكنترول (Control)','sales']];
 function sdV(s){const o={},x=s[14]||{},ks=SD.kpis&&SD.kpis.length?SD.kpis:SD_DEFK;ks.forEach(k=>{const v=x[k[0]];o[k[0]]=v?[v[0],v[1],v[2]==null?null:v[2]]:[null,null,null]});if(!s[14]){o.ga=[s[4],s[5],s[6]];o.pp=[s[7],s[8],null];o.ct=[s[9],s[10],null]}return o}
