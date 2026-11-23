@@ -283,13 +283,20 @@ var SRV={attendance:[],visits:[],coverage:[]},TOKEN=sessionStorage.getItem('rt')
 try{ME=JSON.parse(sessionStorage.getItem('rm')||'null')}catch(e){}
 const IS_ADMIN=()=>!!ME&&ME.isAdmin===true;
 function setMsg(id,t,c){$(id).textContent=t;$(id).className='status '+(c||'')}
-async function retailApi(action,payload={}){
+const RW_ACTIONS={checkIn:1,checkOut:1,submitVisit:1,submitRequest:1,decideRequest:1,cancelRequest:1};
+async function retailApi(action,payload={},note){
+ if(!RW_ACTIONS[action])return retailApiOnce(action,payload);
+ const L=(a,e)=>isEnLang()?e:a;let t1=null;
+ if(note){note(L('جاري التسجيل، ممكن ياخد لحد 20 ثانية في وقت الزحمة 🙏','Saving — this may take up to 20 seconds when it is busy 🙏'));t1=setTimeout(()=>note(L('لسه شغالين على طلبك. مفيش داعي تدوس تاني.','Still working on your request. No need to tap again.')),8000)}
+ try{for(let i=0;;i++){try{return await retailApiOnce(action,payload)}catch(e){if(/lock/i.test(e&&e.message||'')){if(i<2){await new Promise(r=>setTimeout(r,1500*(i+1)));continue}throw new Error(L('السيرفر زحمة جدًا دلوقتي ومتسجّلش. استنى دقيقة وجرّب تاني.','The server is very busy and nothing was saved. Wait a minute and try again.'))}throw e}}}
+ finally{if(t1)clearTimeout(t1)}}
+async function retailApiOnce(action,payload={}){
  const r=await fetch(RETAIL_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,token:TOKEN,...payload}),redirect:'follow'});
  if(!r.ok)throw new Error('تعذر الاتصال بالسيرفر ('+r.status+')');
  const j=await r.json();
  if(!j.success){if(j.code==='AUTH'){logout()}throw new Error(j.message||'فشلت العملية')}
  return j.data}
-function logout(){try{Object.keys(localStorage).filter(k=>k.indexOf('sdc_')===0||k.indexOf('acc_')===0||k.indexOf('rp_')===0).forEach(k=>localStorage.removeItem(k))}catch(_){}window.__srvOk=false;SD=null;{const h_=document.getElementById('homeTop10');if(h_)h_.innerHTML=''}SDINIT=0;ACT=null;ACTTRIED=false;ACTERR='';TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
+function logout(){try{Object.keys(localStorage).filter(k=>k.indexOf('sdc_')===0||k.indexOf('acc_')===0||k.indexOf('rp_')===0||k.indexOf('rq_')===0).forEach(k=>localStorage.removeItem(k))}catch(_){}window.__srvOk=false;RQ=null;RQT=0;SD=null;{const h_=document.getElementById('homeTop10');if(h_)h_.innerHTML=''}SDINIT=0;ACT=null;ACTTRIED=false;ACTERR='';TOKEN='';ME=null;sessionStorage.removeItem('rt');sessionStorage.removeItem('rm');SRV={attendance:[],visits:[],coverage:[]};$('loginGate').style.display='grid';$('lgPin').value='';refreshDashboard()}
 async function doLogin(){
  const id=$('lgId').value.trim(),pin=$('lgPin').value.trim();
  if(!id||!pin){$('lgMsg').textContent='اكتب الكود والـ PIN';return}
@@ -326,7 +333,7 @@ async function startApp(){
    DATA.branches.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.name+(b.region?' — '+b.region:'');sel.appendChild(o)})});
   $('branchCount').textContent=DATA.branches.length;
   if(!bs.length)setMsg('attMsg','مفيش فروع مربوطة بحسابك. كلّم الإدارة.','bad')}catch(e){setMsg('attMsg',e.message,'bad')}
- applyRoleChecklist();loadMiniBoard();setTimeout(()=>{try{initTeamCard()}catch(_){}},2500);
+ applyRoleChecklist();loadMiniBoard();setTimeout(()=>{try{initTeamCard()}catch(_){}},2500);setTimeout(()=>{try{loadRequests()}catch(_){}},4000);
  loadReport()}
 async function loadReport(){
  if(!TOKEN)return;
@@ -339,7 +346,7 @@ function recordAttendance(){
  if(idx===''){setMsg('attMsg','اختار الفرع الأول','bad');return}
  const branch=DATA.branches[+idx];setAttendanceButtonBusy(true,'جارٍ قراءة الموقع...');setMsg('attMsg','جارٍ قراءة GPS...','');
  gps(async pos=>{
-  try{const r=await retailApi(type==='حضور'?'checkIn':'checkOut',{branchId:branch.name,latitude:pos.lat,longitude:pos.lng,accuracy:pos.accuracy});
+  try{const r=await retailApi(type==='حضور'?'checkIn':'checkOut',{branchId:branch.name,latitude:pos.lat,longitude:pos.lng,accuracy:pos.accuracy},t=>setMsg('attMsg',t,''));
    setMsg('attMsg',(r.message||'تم')+' — '+r.distance+' متر من الفرع','good');loadReport()}
   catch(e){setMsg('attMsg','لم يتم تسجيل الحركة: '+e.message,'bad')}
   finally{setAttendanceButtonBusy(false)}
@@ -359,7 +366,7 @@ async function saveVisit(){
  const btn=document.querySelector('#visit button.primary[onclick="saveVisit()"]');btn.disabled=true;btn.textContent='جارٍ حفظ الزيارة...';msg('جارٍ إرسال الزيارة...','');
  CVID=CVID||(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random());
  try{const r=await retailApi('submitVisit',{clientVisitId:CVID,branchId:b.name,latitude:visitCoords.lat,longitude:visitCoords.lng,accuracy:visitCoords.accuracy,
-   type:IS_BM()?'mini':'full',shiftIn:$('shiftIn').value,note:$('visitNote').value,ratings:ratings.map(x=>({section:(x.group||'')+' / '+(x.section||''),item:x.item,rating:x.rating,note:x.note}))});
+   type:IS_BM()?'mini':'full',shiftIn:$('shiftIn').value,note:$('visitNote').value,ratings:ratings.map(x=>({section:(x.group||'')+' / '+(x.section||''),item:x.item,rating:x.rating,note:x.note}))},t=>msg(t,''));
   msg((r.message||'تم الحفظ')+' — التقييم: '+r.percent+'% — جيدة '+r.good+' / سيئة '+r.bad+' / NA '+r.na,'good');CVID=null;loadReport()}
  catch(e){msg('تعذر حفظ الزيارة: '+e.message+' — اضغط حفظ تاني، مش هيتكرر.','bad')}
  finally{btn.disabled=false;btn.textContent='حفظ الزيارة'}}
@@ -701,13 +708,17 @@ function rqRender(){const R=$('rqRoot');if(!RQ){R.innerHTML='<div class="card"><
   h+='<div class="card" style="margin-top:12px"><div class="rq-sum"><div><b>'+cnt('pending')+'</b>معلق</div><div><b>'+cnt('approved')+'</b>موافق عليه</div><div><b>'+cnt('rejected')+'</b>مرفوض</div></div><div class="sd-bar">'+[['ALL','الكل'],['pending','معلق'],['approved','موافق'],['rejected','مرفوض'],['cancelled','ملغي']].map(x=>'<button class="sd-chip'+(f===x[0]?' on':'')+'" onclick="RQF.st=\''+x[0]+'\';rqRender()">'+x[1]+'</button>').join('')+'</div>'+(L.map(r=>rqCard(r,'all')).join('')||'<p class="muted">مفيش طلبات.</p>')+'</div>'}
  R.innerHTML=h;if(LANG==='en')trTree(R);if(RQF.t==='new')rqType()}
 function rqType(){const t=$('rqType').value,p=t==='permission';$('rqToW').style.display=p?'none':'';$('rqT1').style.display=p?'':'none';$('rqT2').style.display=p?'':'none';$('rqL1').textContent=p?'تاريخ الإذن':'من تاريخ'}
-async function loadRequests(){if(!TOKEN)return;try{RQ=await retailApi('getRequests');rqRender()}catch(e){$('rqRoot').innerHTML='<div class="status bad">تعذر تحميل الطلبات: '+esc(e.message)+'</div>'}}
+let RQT=0;
+async function loadRequests(force){if(!TOKEN)return;const ck='rq_'+(ME&&ME.employeeId);let cj=null;try{cj=localStorage.getItem(ck)}catch(_){}
+ if(!RQ&&cj){try{RQ=JSON.parse(cj);rqRender()}catch(_){cj=null}}
+ if(!force&&RQ&&Date.now()-RQT<15000)return;
+ try{const d=await retailApi('getRequests'),tx=JSON.stringify(d);RQT=Date.now();if(tx!==cj||!RQ){RQ=d;rqRender();try{localStorage.setItem(ck,tx)}catch(_){}}}catch(e){if(!RQ)$('rqRoot').innerHTML='<div class="status bad">تعذر تحميل الطلبات: '+esc(e.message)+'</div>'}}
 async function rqSend(){const m=$('rqMsg'),show=(t,c)=>{m.className='status '+(c||'');m.textContent=t;m.style.display=''};const t=$('rqType').value,from=$('rqFrom').value,to=t==='permission'?from:($('rqTo').value||from),reason=$('rqReason').value.trim();
  if(!from)return show('اختار التاريخ','bad');if(to<from)return show('تاريخ النهاية قبل البداية','bad');if(t==='permission'&&(!$('rqFT').value||!$('rqTT').value||$('rqTT').value<=$('rqFT').value))return show('اكتب وقت الإذن صح','bad');if(reason.length<3)return show('اكتب السبب','bad');
- try{show('جاري الإرسال...','');const r=await retailApi('submitRequest',{type:t,fromDate:from,toDate:to,fromTime:$('rqFT').value,toTime:$('rqTT').value,reason});RQF.t='mine';await loadRequests()}catch(e){show(e.message,'bad')}}
-async function rqDecide(id,d){const n=$('rqn_'+id);try{await retailApi('decideRequest',{id,decision:d,note:n?n.value:''});await loadRequests()}catch(e){alert(e.message)}}
-async function rqCancel(id){try{await retailApi('cancelRequest',{id});await loadRequests()}catch(e){alert(e.message)}}
-document.querySelector('[data-tab="permission"]').addEventListener('click',loadRequests);
+ try{show('جاري الإرسال...','');const r=await retailApi('submitRequest',{type:t,fromDate:from,toDate:to,fromTime:$('rqFT').value,toTime:$('rqTT').value,reason},t=>show(t,''));RQF.t='mine';await loadRequests(true)}catch(e){show(e.message,'bad')}}
+async function rqDecide(id,d){const n=$('rqn_'+id);try{await retailApi('decideRequest',{id,decision:d,note:n?n.value:''});await loadRequests(true)}catch(e){alert(e.message)}}
+async function rqCancel(id){try{await retailApi('cancelRequest',{id});await loadRequests(true)}catch(e){alert(e.message)}}
+document.querySelector('[data-tab="permission"]').addEventListener('click',()=>loadRequests());
 
 const PL_UNIT={cin:'جنيه',dev:'جنيه',devg:'جنيه',devt:'جنيه',inst:'جنيه',pts:'نقطة',ptsga:'نقطة',ptssv:'نقطة'};
 const PL_ACT={
